@@ -1,0 +1,3 @@
+[submodule "vendored/RAYLIB"]
+	path = vendored/RAYLIB
+	url = https://github.com/raysan5/raylib
