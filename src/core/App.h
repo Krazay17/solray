@@ -17,8 +17,10 @@ struct Scene
     SceneUpdateCallback Update;
     SceneDrawCallback Draw;
     SceneUnloadCallback Unload;
-    void *data;
+    void *state;
 };
+
+int main_loop(void);
 
 // Global Scene Manager access
 void SwitchScene(Scene *newScene);
