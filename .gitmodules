@@ -1,3 +1,6 @@
 [submodule "vendored/RAYLIB"]
 	path = vendored/RAYLIB
 	url = https://github.com/raysan5/raylib
+[submodule "vendored/enet"]
+	path = vendored/enet
+	url = https://github.com/zpl-c/enet

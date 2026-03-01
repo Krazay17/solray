@@ -3,9 +3,13 @@
 
 typedef struct
 {
-    Sound flashAway;
     Sound pistolFire;
     Sound hitSound;
+    Sound digi;
+    Sound beep1;
+    Sound beep2;
+    Sound woong1;
+    Sound menuMusic;
 } AudioBank;
 
 typedef struct
@@ -16,3 +20,4 @@ typedef struct
 ResourceManager *GetRM(void);
 
 void sol_init_loader(void);
+Sound LoadSoundFromRes(const char *id, const char *ext);

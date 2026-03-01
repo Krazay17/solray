@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "Loader.h"
+#include "net/Net.h"
+#include "GlobalState.h"
 
 // Global definitions
 Scene *currentScene = NULL;
@@ -9,6 +11,9 @@ Camera3D globalCamera = {0};
 
 // Factory forward declarations
 Scene *CreateMenuScene();
+
+static float NetAccumulator = 0.0f;
+float MasterVolume = 1;
 
 void SwitchScene(Scene *newScene)
 {
@@ -27,8 +32,11 @@ int main_loop(void)
 {
     InitWindow(800, 450, "SolRay");
     InitAudioDevice();
-    SetTargetFPS(1000);
+    SetTargetFPS(2000);
     sol_init_loader();
+
+    if (NetInit())
+        NetConnect("127.0.0.1", 7777);
 
     globalCamera.position = (Vector3){10, 10, 10};
     globalCamera.up = (Vector3){0, 1, 0};
@@ -40,6 +48,15 @@ int main_loop(void)
     while (!WindowShouldClose())
     {
         float dt = GetFrameTime();
+        NetService();
+
+        NetAccumulator += dt;
+        if (NetAccumulator > 1.0f / 30.0f)
+        {
+            NetSendLocalPos(globalCamera.position.x, globalCamera.position.y, globalCamera.position.z);
+            NetAccumulator = 0.0f;
+        }
+
         if (currentScene)
             currentScene->Update(currentScene, dt);
 
@@ -59,7 +76,8 @@ int main_loop(void)
         currentScene->Unload(currentScene);
         free(currentScene);
     }
-    
+
+    NetDeinit();
     CloseWindow();
     return 0;
 }

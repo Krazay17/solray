@@ -1,0 +1,8 @@
+// ID_NAME        TYPE          PATH_TO_FILE
+ID_SND_BEEP1      RCDATA        "../assets/Beep1.wav"
+ID_SND_BEEP2      RCDATA        "../assets/Beep2.wav"
+ID_SND_DIGI     RCDATA        "../assets/DigiLoad.mp3"
+ID_SND_HIT      RCDATA        "../assets/Hit.wav"
+ID_SND_MUSIC      RCDATA        "../assets/MenuMusic.mp3"
+ID_SND_GUN      RCDATA        "../assets/SpaceGun.mp3"
+ID_SND_WOONG      RCDATA        "../assets/Woong1.wav"

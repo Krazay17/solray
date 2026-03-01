@@ -1,31 +1,35 @@
 #include "core/App.h"
 #include <stdlib.h>
 #include "core/Loader.h"
+#include "net/Net.h"
 
 // Forward declare the menu factory so we can return to it
 extern Scene *CreateMenuScene();
 
 typedef struct
 {
+    NetState network;
     Sound sound;
-} Level1Data;
+} Level1State;
 
 static void Level1Init(Scene *self)
 {
-    self->state = malloc(sizeof(Level1Data));
-    Level1Data *d = (Level1Data *)self->state;
+    self->state = malloc(sizeof(Level1State));
+    Level1State *s = (Level1State *)self->state;
 
     DisableCursor();
 
-    PlaySound(GetRM()->audio.flashAway);
+    PlaySound(GetRM()->audio.woong1);
 }
 
 static void Level1Update(Scene *self, float delta)
 {
+    Level1State *s = (Level1State *)self->state;
+    NetPoll(&s->network);
     UpdateCamera(&globalCamera, CAMERA_THIRD_PERSON);
     if (IsKeyPressed(KEY_BACKSPACE))
         SwitchScene(CreateMenuScene());
-        
+
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
         PlaySound(GetRM()->audio.pistolFire);
 }
