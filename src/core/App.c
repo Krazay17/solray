@@ -30,7 +30,8 @@ void SwitchScene(Scene *newScene)
 
 int main_loop(void)
 {
-    InitWindow(800, 450, "SolRay");
+    SetConfigFlags(FLAG_MSAA_4X_HINT);
+    InitWindow(1280, 720, "SolRay");
     InitAudioDevice();
     SetTargetFPS(2000);
     sol_init_loader();

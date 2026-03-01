@@ -10,7 +10,17 @@ typedef struct
 {
     NetState network;
     Sound sound;
+    Mesh knotMesh;
+    Material defMat;
+    Model knotModel;
 } Level1State;
+
+Matrix matDefault = {
+    1.0f, 0.0f, 0.0f, 0.0f,
+    0.0f, 1.0f, 0.0f, 0.0f,
+    0.0f, 0.0f, 1.0f, 0.0f,
+    0.0f, 0.0f, 0.0f, 1.0f
+};
 
 static void Level1Init(Scene *self)
 {
@@ -20,6 +30,10 @@ static void Level1Init(Scene *self)
     DisableCursor();
 
     PlaySound(GetRM()->audio.woong1);
+
+    s->knotMesh = GenMeshKnot(5.0f, 2.0f, 24, 24);
+    s->defMat = LoadMaterialDefault();
+    s->knotModel = LoadModelFromMesh(s->knotMesh);
 }
 
 static void Level1Update(Scene *self, float delta)
@@ -36,10 +50,13 @@ static void Level1Update(Scene *self, float delta)
 
 static void Level1Draw(Scene *self)
 {
+    Level1State *s = (Level1State *)self->state;
     BeginMode3D(globalCamera);
     DrawCube((Vector3){0, 0, 0}, 2.0f, 2.0f, 2.0f, RED);
     DrawCubeWires((Vector3){0, 0, 0}, 2.0f, 2.0f, 2.0f, MAROON);
     DrawGrid(10, 1.0f);
+    DrawModel(s->knotModel, (Vector3){0,5,0}, 1.0f, BLUE);
+    DrawModelWires(s->knotModel, (Vector3){0,5,0}, 1.0f, BLACK);
     EndMode3D();
 
     DrawText("LEVEL 1", 10, 10, 20, DARKGRAY);
@@ -47,6 +64,9 @@ static void Level1Draw(Scene *self)
 
 static void Level1Unload(Scene *self)
 {
+    Level1State *s = (Level1State *)self->state;
+    UnloadMaterial(s->defMat);
+    UnloadModel(s->knotModel);
     free(self->state);
 }
 
