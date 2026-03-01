@@ -40,6 +40,7 @@ bool UpdateSlider(Slider *slider)
 
     if (slider->isHovered && IsMouseButtonDown(MOUSE_LEFT_BUTTON))
     {
+        slider->isPressed = 1;
         float localX = mouse.x - slider->bg.x;
         float newValue = localX / slider->bg.width;
         if (newValue < 0.0f)
@@ -52,12 +53,15 @@ bool UpdateSlider(Slider *slider)
             return true;
         }
     }
+    else
+        slider->isPressed = 0;
     return false;
 }
 
 void DrawSlider(Slider *slider)
 {
     Color drawColor = slider->isHovered ? SKYBLUE : slider->bgC;
+    Color handleColor = slider->isPressed ? DARKGRAY : slider->handleC;
     DrawRectangleRec(slider->bg, drawColor);
     if (slider->isHovered)
         DrawRectangleLinesEx(slider->bg, 2.0f, BLUE);
@@ -75,7 +79,7 @@ void DrawSlider(Slider *slider)
                          slider->handleWidth,
                          slider->bg.height,
                      },
-                     slider->handleC);
+                     handleColor);
     // Center text logic
     int fontSize = 20;
     int textWidth = MeasureText(slider->text, fontSize);

@@ -12,12 +12,22 @@ typedef struct
     Sound menuMusic;
 } AudioBank;
 
+typedef struct 
+{
+    Material defMat;
+    Mesh cylinderMesh;
+    Model cylinderModel;
+} DrawBank;
+
+
 typedef struct
 {
     AudioBank audio;
+    DrawBank draw;
 } ResourceManager;
 
 ResourceManager *GetRM(void);
 
 void sol_init_loader(void);
 Sound LoadSoundFromRes(const char *id, const char *ext);
+void CloseLoader(void);

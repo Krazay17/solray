@@ -1,13 +1,12 @@
 #include "core/App.h"
+#include "World.h"
 #include <stdlib.h>
 #include "ui/Button.h"
 #include "core/Loader.h"
 
-#define MAX_HOVER_CHANNELS 12
-
 // Forward declare the menu factory so we can return to it
-extern Scene *CreateLevel1Scene();
-extern Scene *CreateSettingsScene();
+extern World *CreateLevel1World();
+extern World *CreateSettingsWorld();
 
 typedef enum
 {
@@ -20,14 +19,13 @@ typedef enum
 typedef struct
 {
     Button buttons[BTN_COUNT];
-    Sound hoverSounds[MAX_HOVER_CHANNELS];
+    Sound hoverSound;
     int currentChannel;
-} MenuState;
+} State;
 
-static void MenuInit(Scene *self)
+static void Init(World *self)
 {
-    self->state = malloc(sizeof(MenuState));
-    MenuState *d = (MenuState *)self->state;
+    State *d = (State *)self->state;
 
     float startY = 150.0f;
     for (int i = 0; i < BTN_COUNT; i++)
@@ -35,10 +33,7 @@ static void MenuInit(Scene *self)
         d->buttons[i] = (Button){{300, startY + (i * 60), 200, 50}, GRAY, false, false};
     }
 
-    for (int i = 0; i < MAX_HOVER_CHANNELS; i++)
-    {
-        d->hoverSounds[i] = LoadSoundAlias(GetRM()->audio.beep1);
-    }
+    d->hoverSound = GetRM()->audio.beep1;
     d->buttons[BTN_START].text = "Start Game";
     d->buttons[BTN_SETTINGS].text = "Settings";
     d->buttons[BTN_QUIT].text = "Quit";
@@ -50,28 +45,32 @@ static void MenuInit(Scene *self)
     PlaySound(music);
 }
 
-static void MenuUpdate(Scene *self, float delta)
+static void Step(World *self, float delta)
 {
-    MenuState *d = (MenuState *)self->state;
+    State *d = (State *)self->state;
+}
+
+static void Tick(World *self, float dt)
+{
+    State *d = (State *)self->state;
 
     for (int i = 0; i < BTN_COUNT; i++)
     {
         if (d->buttons[i].isHovered && !d->buttons[i].wasHovered)
         {
-            PlaySound(d->hoverSounds[d->currentChannel]);
-            d->currentChannel = (d->currentChannel + 1) % MAX_HOVER_CHANNELS;
+            PlaySound(d->hoverSound);
         }
         if (UpdateButton(&d->buttons[i]))
         {
             if (i == BTN_START)
             {
-                SwitchScene(CreateLevel1Scene());
+                SwitchWorld(CreateLevel1World());
                 PlaySound(GetRM()->audio.beep2);
                 return;
             }
             if (i == BTN_SETTINGS)
             {
-                SwitchScene(CreateSettingsScene());
+                SwitchWorld(CreateSettingsWorld());
                 PlaySound(GetRM()->audio.beep2);
                 return;
             }
@@ -84,34 +83,36 @@ static void MenuUpdate(Scene *self, float delta)
     }
 }
 
-static void MenuDraw(Scene *self)
+static void Draw(World *self)
 {
-    MenuState *d = (MenuState *)self->state;
+    State *d = (State *)self->state;
+
     for (int i = 0; i < BTN_COUNT; i++)
     {
         DrawButton(&d->buttons[i]);
     }
 }
 
-static void MenuUnload(Scene *self)
+static void Exit(World *self)
 {
-    MenuState *d = (MenuState *)self->state;
-    if (d)
-    {
-        for (int i = 0; i < MAX_HOVER_CHANNELS; i++)
-        {
-            UnloadSoundAlias(d->hoverSounds[i]);
-        }
-        free(d);
-    }
 }
 
-Scene *CreateMenuScene()
+typedef struct
 {
-    Scene *s = malloc(sizeof(Scene));
-    s->Init = MenuInit;
-    s->Update = MenuUpdate;
-    s->Draw = MenuDraw;
-    s->Unload = MenuUnload;
-    return s;
+    World world;
+    State state;
+} Container;
+World *CreateMenuWorld()
+{
+    Container *w = malloc(sizeof(Container));
+
+    w->world.Init = Init;
+    w->world.Step = Step;
+    w->world.Tick = Tick;
+    w->world.Draw = Draw;
+    w->world.Exit = Exit;
+
+    w->world.state = &w->state;
+
+    return (World *)w;
 }

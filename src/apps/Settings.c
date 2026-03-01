@@ -1,10 +1,11 @@
 #include "core/App.h"
+#include "World.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include "ui/Button.h"
 #include "core/GlobalState.h"
 
-extern Scene *CreateMenuScene();
+extern World *CreateMenuWorld();
 
 typedef enum
 {
@@ -15,6 +16,7 @@ typedef enum
 typedef enum
 {
     SLDR_VOLUME,
+    SLRD_OPACITY,
     SLDR_COUNT,
 } SettingsSliderId;
 
@@ -22,12 +24,11 @@ typedef struct
 {
     Button buttons[BTN_COUNT];
     Slider sliders[SLDR_COUNT];
-} SettingsState;
+} State;
 
-static void SettingsInit(Scene *self)
+static void Init(World *self)
 {
-    self->state = malloc(sizeof(SettingsState));
-    SettingsState *s = (SettingsState *)self->state;
+    State *s = (State *)self->state;
 
     float startY = 150.0f;
     for (int i = 0; i < BTN_COUNT; i++)
@@ -55,14 +56,21 @@ static void SettingsInit(Scene *self)
 
     s->sliders[SLDR_VOLUME].text = "Volume";
     s->sliders[SLDR_VOLUME].value = GetMasterVolume();
+    s->sliders[SLRD_OPACITY].text = "Opacity";
+    s->sliders[SLRD_OPACITY].value = WindowOpacity;
 }
 
-static void SettingsUpdate(Scene *self, float delta)
+static void Step(World *self, float delta)
 {
-    SettingsState *s = (SettingsState *)self->state;
+    State *s = (State *)self->state;
+}
+
+static void Tick(World *self, float dt)
+{
+    State *s = (State *)self->state;
 
     if (IsKeyPressed(KEY_BACKSPACE))
-        SwitchScene(CreateMenuScene());
+        SwitchWorld(CreateMenuWorld());
 
     float startY = 150.0f;
     for (int i = 0; i < BTN_COUNT; i++)
@@ -79,16 +87,19 @@ static void SettingsUpdate(Scene *self, float delta)
         if (UpdateSlider(&s->sliders[i]))
         {
             if (i == SLDR_VOLUME)
-            {
                 SetMasterVolume(s->sliders[i].value);
+            if (i == SLRD_OPACITY)
+            {
+                SetWindowOpacity(s->sliders[i].value);
+                WindowOpacity = s->sliders[i].value;
             }
         }
     }
 }
 
-static void SettingsDraw(Scene *self)
+static void Draw(World *self)
 {
-    SettingsState *s = (SettingsState *)self->state;
+    State *s = (State *)self->state;
     for (int i = 0; i < BTN_COUNT; i++)
     {
         DrawButton(&s->buttons[i]);
@@ -99,17 +110,26 @@ static void SettingsDraw(Scene *self)
     }
 }
 
-static void SettingsUnload(Scene *self)
+static void Exit(World *self)
 {
-    free(self->state);
 }
 
-Scene *CreateSettingsScene()
+typedef struct
 {
-    Scene *s = malloc(sizeof(Scene));
-    s->Init = SettingsInit;
-    s->Update = SettingsUpdate;
-    s->Draw = SettingsDraw;
-    s->Unload = SettingsUnload;
-    return s;
+    World world;
+    State state;
+} Container;
+World *CreateSettingsWorld()
+{
+    Container *w = malloc(sizeof(Container));
+
+    w->world.Init = Init;
+    w->world.Step = Step;
+    w->world.Tick = Tick;
+    w->world.Draw = Draw;
+    w->world.Exit = Exit;
+
+    w->world.state = &w->state;
+
+    return (World *)w;
 }

@@ -1,82 +1,125 @@
 #include "core/App.h"
+#include "World.h"
+#include "modules/PhysxSystem.h"
 #include <stdlib.h>
 #include "core/Loader.h"
 #include "net/Net.h"
 
 // Forward declare the menu factory so we can return to it
-extern Scene *CreateMenuScene();
+extern World *CreateMenuWorld();
+
+#define MAX_ENTITIES 100
 
 typedef struct
 {
     NetState network;
     Sound sound;
     Mesh knotMesh;
-    Material defMat;
     Model knotModel;
-} Level1State;
+    Model *playerModel;
+    int entities;
 
-Matrix matDefault = {
-    1.0f, 0.0f, 0.0f, 0.0f,
-    0.0f, 1.0f, 0.0f, 0.0f,
-    0.0f, 0.0f, 1.0f, 0.0f,
-    0.0f, 0.0f, 0.0f, 1.0f
-};
+    Body bodies[MAX_ENTITIES];
 
-static void Level1Init(Scene *self)
+} State;
+
+static void CreatePlayer(State *s)
 {
-    self->state = malloc(sizeof(Level1State));
-    Level1State *s = (Level1State *)self->state;
+    s->bodies[s->entities] = (Body){
+        .position = (Vector3){0, 5, 0},
+        .velocity = (Vector3){0, 5, 0},
+        .accelG = 2.0f,
+        .accelA = 1.0f,
+        .frictionA = 0.0f,
+        .frictionG = 0.5f,
+        .mass = 100.0f,
+    };
+    s->entities++;
+}
+
+static void Init(World *self)
+{
+    State *s = (State *)self->state;
+
+    s->entities = 0;
+    s->playerModel = &GetRM()->draw.cylinderModel;
+    s->knotMesh = GenMeshKnot(1, 1, 12, 24);
+    s->knotModel = LoadModelFromMesh(s->knotMesh);
 
     DisableCursor();
-
     PlaySound(GetRM()->audio.woong1);
 
-    s->knotMesh = GenMeshKnot(5.0f, 2.0f, 24, 24);
-    s->defMat = LoadMaterialDefault();
-    s->knotModel = LoadModelFromMesh(s->knotMesh);
+    CreatePlayer(s);
 }
 
-static void Level1Update(Scene *self, float delta)
+static void Step(World *self, float dt)
 {
-    Level1State *s = (Level1State *)self->state;
+    State *s = (State *)self->state;
     NetPoll(&s->network);
-    UpdateCamera(&globalCamera, CAMERA_THIRD_PERSON);
-    if (IsKeyPressed(KEY_BACKSPACE))
-        SwitchScene(CreateMenuScene());
 
-    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
-        PlaySound(GetRM()->audio.pistolFire);
+    Update_Physx(s->bodies, s->entities, dt);
 }
 
-static void Level1Draw(Scene *self)
+static void Tick(World *self, float dt)
 {
-    Level1State *s = (Level1State *)self->state;
+    State *s = (State *)self->state;
+    if (IsKeyPressed(KEY_BACKSPACE))
+        SwitchWorld(CreateMenuWorld());
+    if (IsKeyPressed(KEY_ESCAPE) && IsCursorHidden())
+        EnableCursor();
+    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+    {
+        if (IsCursorHidden())
+            PlaySound(GetRM()->audio.pistolFire);
+        else
+            DisableCursor();
+    }
+}
+
+static void Draw(World *self)
+{
+    State *s = (State *)self->state;
+
     BeginMode3D(globalCamera);
-    DrawCube((Vector3){0, 0, 0}, 2.0f, 2.0f, 2.0f, RED);
-    DrawCubeWires((Vector3){0, 0, 0}, 2.0f, 2.0f, 2.0f, MAROON);
-    DrawGrid(10, 1.0f);
-    DrawModel(s->knotModel, (Vector3){0,5,0}, 1.0f, BLUE);
-    DrawModelWires(s->knotModel, (Vector3){0,5,0}, 1.0f, BLACK);
+    for (int i = 0; i < s->entities; i++)
+    {
+        Body body = s->bodies[i];
+        DrawModel(*s->playerModel, body.position, 1.0f, RED);
+        DrawModelWires(*s->playerModel, body.position, 1, BLACK);
+    }
+    DrawModel(s->knotModel, (Vector3){0, 5, 0}, 1.0f, BLUE);
+    DrawModelWires(s->knotModel, (Vector3){0, 5, 0}, 1.0f, BLACK);
+
+    DrawGrid(20, 1.0f);
     EndMode3D();
 
     DrawText("LEVEL 1", 10, 10, 20, DARKGRAY);
+
+    UpdateCamera(&globalCamera, CAMERA_THIRD_PERSON);
 }
 
-static void Level1Unload(Scene *self)
+static void Exit(World *self)
 {
-    Level1State *s = (Level1State *)self->state;
-    UnloadMaterial(s->defMat);
+    State *s = (State *)self->state;
     UnloadModel(s->knotModel);
-    free(self->state);
 }
 
-// The only public function for this file
-Scene *CreateLevel1Scene()
+typedef struct
 {
-    Scene *s = malloc(sizeof(Scene));
-    s->Init = Level1Init;
-    s->Update = Level1Update;
-    s->Draw = Level1Draw;
-    s->Unload = Level1Unload;
-    return s;
+    World world;
+    State state;
+} Container;
+World *CreateLevel1World()
+{
+    Container *w = malloc(sizeof(Container));
+
+    w->world.Init = Init;
+    w->world.Step = Step;
+    w->world.Tick = Tick;
+    w->world.Draw = Draw;
+    w->world.Exit = Exit;
+
+    w->world.state = &w->state;
+
+    return (World *)w;
 }

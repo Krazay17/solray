@@ -20,6 +20,10 @@ void sol_init_loader(void)
     res->audio.beep2 = LoadSoundFromRes("ID_SND_BEEP2", ".wav");
     res->audio.menuMusic = LoadSoundFromRes("ID_SND_MUSIC", ".mp3");
     res->audio.woong1 = LoadSoundFromRes("ID_SND_WOONG", ".wav");
+
+    res->draw.defMat = LoadMaterialDefault();
+    Mesh cylMesh = res->draw.cylinderMesh = GenMeshCylinder(0.5f, 1.0f, 8);
+    res->draw.cylinderModel = LoadModelFromMesh(cylMesh);
 }
 
 Sound LoadSoundFromRes(const char *id, const char *ext)
@@ -46,6 +50,10 @@ void CloseLoader(void)
         UnloadSound(res->audio.beep2);
         UnloadSound(res->audio.woong1);
         UnloadSound(res->audio.menuMusic);
+
+        UnloadModel(res->draw.cylinderModel);
+        UnloadMesh(res->draw.cylinderMesh);
+
         free(res);
         res = NULL;
     }

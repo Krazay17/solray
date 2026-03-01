@@ -1,4 +1,5 @@
 #include "App.h"
+#include "apps/World.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include "Loader.h"
@@ -6,65 +7,85 @@
 #include "GlobalState.h"
 
 // Global definitions
-Scene *currentScene = NULL;
+World *currentWorld = NULL;
+static World *pendingWorld = NULL;
 Camera3D globalCamera = {0};
+float WindowOpacity = 1.0f;
 
 // Factory forward declarations
-Scene *CreateMenuScene();
+World *CreateMenuWorld();
 
-static float NetAccumulator = 0.0f;
+static float Accumulator = 0.0f;
 float MasterVolume = 1;
+float TimeStep = 1.0f / 60.0f;
 
-void SwitchScene(Scene *newScene)
+void SwitchWorld(World *world)
 {
-    if (!newScene)
-        return;
-    if (currentScene)
+    if (pendingWorld)
     {
-        currentScene->Unload(currentScene);
-        free(currentScene);
+        free(pendingWorld);
     }
-    currentScene = newScene;
-    currentScene->Init(currentScene);
+    pendingWorld = world;
+}
+
+static void PerformSwitchWorld()
+{
+    if (!pendingWorld)
+        return;
+    if (currentWorld)
+    {
+        currentWorld->Exit(currentWorld);
+        free(currentWorld);
+        currentWorld = NULL;
+    }
+    currentWorld = pendingWorld;
+    pendingWorld = NULL;
+    if (currentWorld && currentWorld->Init)
+        currentWorld->Init(currentWorld);
 }
 
 int main_loop(void)
 {
     SetConfigFlags(FLAG_MSAA_4X_HINT);
     InitWindow(1280, 720, "SolRay");
+    SetExitKey(0);
     InitAudioDevice();
     SetTargetFPS(2000);
     sol_init_loader();
 
-    if (NetInit())
-        NetConnect("127.0.0.1", 7777);
+    // if (NetInit())
+    //     NetConnect("127.0.0.1", 7777);
 
     globalCamera.position = (Vector3){10, 10, 10};
     globalCamera.up = (Vector3){0, 1, 0};
     globalCamera.fovy = 45;
     globalCamera.projection = CAMERA_PERSPECTIVE;
 
-    SwitchScene(CreateMenuScene());
+    SwitchWorld(CreateMenuWorld());
 
     while (!WindowShouldClose())
     {
+        PerformSwitchWorld();
         float dt = GetFrameTime();
         NetService();
 
-        NetAccumulator += dt;
-        if (NetAccumulator > 1.0f / 30.0f)
+        Accumulator += dt;
+        while (Accumulator > TimeStep)
         {
-            NetSendLocalPos(globalCamera.position.x, globalCamera.position.y, globalCamera.position.z);
-            NetAccumulator = 0.0f;
+            if (currentWorld)
+                currentWorld->Step(currentWorld, TimeStep);
+            else
+                break;
+            Accumulator -= TimeStep;
         }
-
-        if (currentScene)
-            currentScene->Update(currentScene, dt);
 
         BeginDrawing();
         ClearBackground(DARKGRAY);
-        if (currentScene)
-            currentScene->Draw(currentScene);
+        if (currentWorld)
+        {
+            currentWorld->Tick(currentWorld, dt);
+            currentWorld->Draw(currentWorld);
+        }
         int fps = GetFPS();
         char buffer[10];
         sprintf(buffer, "%d", fps);
@@ -72,12 +93,13 @@ int main_loop(void)
         EndDrawing();
     }
 
-    if (currentScene)
+    if (currentWorld)
     {
-        currentScene->Unload(currentScene);
-        free(currentScene);
+        currentWorld->Exit(currentWorld);
+        free(currentWorld);
     }
-
+    
+    CloseLoader();
     NetDeinit();
     CloseWindow();
     return 0;
