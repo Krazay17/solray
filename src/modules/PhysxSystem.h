@@ -9,6 +9,7 @@ typedef struct
     Vector3 velocity;
     float frictionG, frictionA;
     float accelG, accelA;
+    float speedG, speedA;
     float mass;
 } Body;
 

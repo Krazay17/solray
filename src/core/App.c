@@ -66,29 +66,35 @@ int main_loop(void)
     while (!WindowShouldClose())
     {
         PerformSwitchWorld();
+        World *w = currentWorld;
+        if (!w)
+        {
+            BeginDrawing();
+            ClearBackground(BLACK);
+            DrawText("No World Loaded", 10, 10, 20, RED);
+            EndDrawing();
+            continue; // Skip to next frame
+        }
+
         float dt = GetFrameTime();
         NetService();
 
         Accumulator += dt;
         while (Accumulator > TimeStep)
         {
-            if (currentWorld)
-                currentWorld->Step(currentWorld, TimeStep);
-            else
-                break;
+            w->Step(w, TimeStep);
             Accumulator -= TimeStep;
         }
 
-        BeginDrawing();
-        ClearBackground(DARKGRAY);
-        if (currentWorld)
-        {
-            currentWorld->Tick(currentWorld, dt);
-            currentWorld->Draw(currentWorld);
-        }
+        w->Tick(w, dt);
+
         int fps = GetFPS();
         char buffer[10];
         sprintf(buffer, "%d", fps);
+
+        BeginDrawing();
+        ClearBackground(DARKGRAY);
+        w->Draw(w);
         DrawText(buffer, 0, 100, 24, GREEN);
         EndDrawing();
     }
@@ -98,7 +104,7 @@ int main_loop(void)
         currentWorld->Exit(currentWorld);
         free(currentWorld);
     }
-    
+
     CloseLoader();
     NetDeinit();
     CloseWindow();

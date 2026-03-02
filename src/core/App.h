@@ -4,8 +4,6 @@
 #include "raylib.h"
 #include <stdint.h>
 
-typedef struct World World;
-
 #pragma pack(push, 1) // Tells the compiler: "No padding, keep it tight"
 typedef struct
 {
@@ -15,12 +13,10 @@ typedef struct
 } PlayerPacket;
 #pragma pack(pop) // Restore normal alignment for the rest of your code
 
-int main_loop(void);
-
-// Global World Manager access
-void SwitchWorld(World *world);
-
-// Global Camera access (Shared across 3D scenes)
+typedef struct World World;
 extern Camera3D globalCamera;
+
+int main_loop(void);
+void SwitchWorld(World *world);
 
 #endif

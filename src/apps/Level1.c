@@ -1,6 +1,9 @@
 #include "core/App.h"
 #include "World.h"
+#include "modules/InputSystem.h"
+#include "modules/MoveSystem.h"
 #include "modules/PhysxSystem.h"
+#include "modules/CamSystem.h"
 #include <stdlib.h>
 #include "core/Loader.h"
 #include "net/Net.h"
@@ -18,23 +21,42 @@ typedef struct
     Model knotModel;
     Model *playerModel;
     int entities;
+    int localId;
 
+    Input inputs[MAX_ENTITIES];
     Body bodies[MAX_ENTITIES];
-
+    CamControl camControl;
 } State;
 
+static int AddEntity(State *s)
+{
+    int id = s->entities;
+    s->bodies[id] = (Body){0};
+    s->inputs[id] = (Input){0};
+
+    s->entities++;
+    return id;
+}
 static void CreatePlayer(State *s)
 {
-    s->bodies[s->entities] = (Body){
+    s->localId = AddEntity(s);
+
+    s->bodies[s->localId] = (Body){
         .position = (Vector3){0, 5, 0},
         .velocity = (Vector3){0, 5, 0},
-        .accelG = 2.0f,
-        .accelA = 1.0f,
-        .frictionA = 0.0f,
+        .accelG = 15.0f,
+        .accelA = 5.0f,
         .frictionG = 0.5f,
+        .frictionA = 0.0f,
+        .speedG = 5.0f,
+        .speedA = 1.0f,
         .mass = 100.0f,
     };
-    s->entities++;
+    s->camControl = (CamControl){
+        .yaw = 0,
+        .pitch = 0,
+        .sens = 0.2f,
+    };
 }
 
 static void Init(World *self)
@@ -56,8 +78,6 @@ static void Step(World *self, float dt)
 {
     State *s = (State *)self->state;
     NetPoll(&s->network);
-
-    Update_Physx(s->bodies, s->entities, dt);
 }
 
 static void Tick(World *self, float dt)
@@ -74,6 +94,12 @@ static void Tick(World *self, float dt)
         else
             DisableCursor();
     }
+    if (IsCursorHidden())
+        Update_Cam(&globalCamera, &s->bodies[s->localId], &s->camControl);
+
+    Update_Input(s->inputs, s->entities, s->localId, globalCamera);
+    Update_Move(s->inputs, s->bodies, s->entities, dt);
+    Update_Physx(s->bodies, s->entities, dt);
 }
 
 static void Draw(World *self)
@@ -90,12 +116,10 @@ static void Draw(World *self)
     DrawModel(s->knotModel, (Vector3){0, 5, 0}, 1.0f, BLUE);
     DrawModelWires(s->knotModel, (Vector3){0, 5, 0}, 1.0f, BLACK);
 
-    DrawGrid(20, 1.0f);
+    DrawGrid(50, 1.0f);
     EndMode3D();
 
     DrawText("LEVEL 1", 10, 10, 20, DARKGRAY);
-
-    UpdateCamera(&globalCamera, CAMERA_THIRD_PERSON);
 }
 
 static void Exit(World *self)

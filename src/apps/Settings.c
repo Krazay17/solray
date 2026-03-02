@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include "ui/Button.h"
 #include "core/GlobalState.h"
+#include "raymath.h"
 
 extern World *CreateMenuWorld();
 
@@ -90,8 +91,9 @@ static void Tick(World *self, float dt)
                 SetMasterVolume(s->sliders[i].value);
             if (i == SLRD_OPACITY)
             {
-                SetWindowOpacity(s->sliders[i].value);
-                WindowOpacity = s->sliders[i].value;
+                float limit = Lerp(0.2f, 1.0f, s->sliders[i].value);
+                SetWindowOpacity(limit);
+                WindowOpacity = limit;
             }
         }
     }
