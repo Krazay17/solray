@@ -76,7 +76,7 @@ static void Tick(World *self, float dt)
             }
             if (i == BTN_QUIT)
             {
-                CloseWindow();
+                AppShouldClose = true;
                 return;
             }
         }

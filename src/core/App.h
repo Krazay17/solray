@@ -15,6 +15,7 @@ typedef struct
 
 typedef struct World World;
 extern Camera3D globalCamera;
+extern bool AppShouldClose;
 
 int main_loop(void);
 void SwitchWorld(World *world);

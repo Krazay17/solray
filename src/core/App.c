@@ -11,6 +11,7 @@ World *currentWorld = NULL;
 static World *pendingWorld = NULL;
 Camera3D globalCamera = {0};
 float WindowOpacity = 1.0f;
+bool AppShouldClose = false;
 
 // Factory forward declarations
 World *CreateMenuWorld();
@@ -23,6 +24,7 @@ void SwitchWorld(World *world)
 {
     if (pendingWorld)
     {
+        pendingWorld->Exit(pendingWorld);
         free(pendingWorld);
     }
     pendingWorld = world;
@@ -63,7 +65,7 @@ int main_loop(void)
 
     SwitchWorld(CreateMenuWorld());
 
-    while (!WindowShouldClose())
+    while (!AppShouldClose)
     {
         PerformSwitchWorld();
         World *w = currentWorld;
@@ -103,10 +105,12 @@ int main_loop(void)
     {
         currentWorld->Exit(currentWorld);
         free(currentWorld);
+        currentWorld = NULL;
     }
 
-    CloseLoader();
     NetDeinit();
+    CloseLoader();
+    CloseAudioDevice();
     CloseWindow();
     return 0;
 }

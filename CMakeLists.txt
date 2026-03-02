@@ -14,12 +14,21 @@ target_include_directories(solray PRIVATE
     "src"
     "vendored/enet/include"
 )
-target_link_libraries(solray PRIVATE
-    raylib
+if(WIN32)
+    target_link_libraries(solray PRIVATE
+        raylib
     
-    ws2_32
-    winmm
-)
+        ws2_32
+        winmm
+    )
+else()
+    target_link_libraries(solray PRIVATE
+        raylib
+    
+        GL
+        rt
+    )
+endif()
 
 if(WIN32)
     #target_link_options(solray PRIVATE -mwindows)

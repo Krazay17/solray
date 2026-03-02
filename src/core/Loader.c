@@ -22,8 +22,8 @@ void sol_init_loader(void)
     res->audio.woong1 = LoadSoundFromRes("ID_SND_WOONG", ".wav");
 
     res->draw.defMat = LoadMaterialDefault();
-    Mesh cylMesh = res->draw.cylinderMesh = GenMeshCylinder(0.5f, 1.0f, 8);
-    res->draw.cylinderModel = LoadModelFromMesh(cylMesh);
+    res->draw.cylinderMesh = GenMeshCylinder(0.5f, 1.0f, 8);
+    res->draw.cylinderModel = LoadModelFromMesh(res->draw.cylinderMesh);
 }
 
 Sound LoadSoundFromRes(const char *id, const char *ext)
@@ -52,7 +52,6 @@ void CloseLoader(void)
         UnloadSound(res->audio.menuMusic);
 
         UnloadModel(res->draw.cylinderModel);
-        UnloadMesh(res->draw.cylinderMesh);
 
         free(res);
         res = NULL;
