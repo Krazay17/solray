@@ -2,6 +2,7 @@
 #include "raylib.h"
 
 typedef struct World World;
+typedef struct Entities Entities;
 
 typedef struct
 {
@@ -13,4 +14,4 @@ typedef struct
     float mass;
 } Body;
 
-void Update_Physx(Body *bodies, int entities, float dt);
+void Update_Physx(Body *bodies, Entities *entities, float dt);

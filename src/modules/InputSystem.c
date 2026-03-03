@@ -1,10 +1,13 @@
 #include "InputSystem.h"
 #include "raymath.h"
+#include "core/GameWorld.h"
 
-void Update_Input(Input *inputs, int entities, int localId, Camera3D cam)
+void Update_Input(Input *inputs, Entities *entities, int localId, Camera3D cam)
 {
-    for (int i = 0; i < entities; i++)
+    for (int i = 0; i < entities->count; i++)
     {
+        if (!entities->active[i])
+            continue;
         Input *input = &inputs[i];
         if (i == localId)
             Local_Input(input, localId, cam);

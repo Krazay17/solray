@@ -6,7 +6,7 @@ set(CMAKE_C_STANDARD 11)
 add_subdirectory(vendored/RAYLIB EXCLUDE_FROM_ALL)
 
 file(GLOB_RECURSE SOURCES "src/*.c")
-set(RESOURCE_FILE "resource/resources.rc")
+set(RESOURCE_FILE "assets/resources.rc")
 
 #---- Client App ----
 add_executable(solray ${SOURCES} ${RESOURCE_FILE})
@@ -33,6 +33,17 @@ endif()
 if(WIN32)
     #target_link_options(solray PRIVATE -mwindows)
     target_compile_definitions(solray PRIVATE _WINSOCK_DEPRECATED_NO_WARNINGS)
+endif()
+
+if(EMSCRIPTEN)
+    set(CMAKE_EXECUTABLE_SUFFIX ".html")
+    #target_link_options(hello PRIVATE "--shell-file" "${CMAKE_SOURCE_DIR}/config/shell.html")
+    target_link_options(solray PRIVATE 
+        "-sASYNCIFY"
+        "-sUSE_SDL=3"
+        "--preload-file assets"
+        "-D__EMSCRIPTEN__"
+    )
 endif()
 
 #---- Server App ----

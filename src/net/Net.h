@@ -2,7 +2,7 @@
 #include <stdbool.h>
 #include "../server/Server.h"
 
-typedef struct
+typedef struct NetState
 {
     PlayerPacket players[MAX_CLIENTS];
     int localId;    // The ID the server gave US

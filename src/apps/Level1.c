@@ -1,10 +1,7 @@
 #include "core/App.h"
 #include <stdio.h>
-#include "World.h"
-#include "modules/InputSystem.h"
-#include "modules/MoveSystem.h"
-#include "modules/PhysxSystem.h"
-#include "modules/CamSystem.h"
+#include "core/World.h"
+#include "core/GameWorld.h"
 #include <stdlib.h>
 #include "core/Loader.h"
 #include "net/Net.h"
@@ -13,37 +10,25 @@
 // Forward declare the menu factory so we can return to it
 extern World *CreateMenuWorld();
 
-#define MAX_ENTITIES 100
-
-typedef struct
+static int AddEntity(GameState *s)
 {
-    NetState network;
-    Sound sound;
-    Mesh knotMesh;
-    Model knotModel;
-    Model *playerModel;
-    int entities;
-    int localId;
-
-    int netLocalId;
-    int netToLocal[MAX_CLIENTS];
-
-    Input inputs[MAX_ENTITIES];
-    Body bodies[MAX_ENTITIES];
-    CamControl camControl;
-
-} State;
-
-static int AddEntity(State *s)
-{
-    int id = s->entities;
-    s->bodies[id] = (Body){0};
-    s->inputs[id] = (Input){0};
-
-    s->entities++;
-    return id;
+    for (int i = 0; i < MAX_ENTITIES; i++)
+    {
+        if (!s->entities.active[i])
+        {
+            s->entities.active[i] = true;
+            s->bodies[i] = (Body){0};
+            s->inputs[i] = (Input){0};
+            // Keep track of the highest index to optimize loops if you want
+            if (i >= s->entities.count)
+                s->entities.count = i + 1;
+            return i;
+        }
+    }
+    return -1; // Out of memory!
 }
-static int CreatePlayer(State *s)
+
+int CreatePlayer(GameState *s)
 {
     int id = AddEntity(s);
 
@@ -69,8 +54,8 @@ static int CreatePlayer(State *s)
 
 static void Init(World *self)
 {
-    State *s = (State *)self->state;
-    s->entities = 0;
+    GameState *s = (GameState *)self->state;
+    s->entities.count = 0;
     s->playerModel = &GetRM()->draw.cylinderModel;
     s->knotMesh = GenMeshKnot(1, 1, 12, 24);
     s->knotModel = LoadModelFromMesh(s->knotMesh);
@@ -87,49 +72,18 @@ static void Init(World *self)
 
 static void Step(World *self, float dt)
 {
-    State *s = (State *)self->state;
-    const NetState *netState = NetPoll();
-
-    if (s->netLocalId == -1 && netState->localId != -1)
-    {
-        s->netLocalId = netState->localId;
-        s->netToLocal[netState->localId] = 0;
-    }
-
-    for (int i = 0; i < MAX_CLIENTS; i++)
-    {
-        if (!netState->players[i].active || s->netLocalId == i)
-            continue;
-
-        int localId = s->netToLocal[i];
-
-        if (localId == -1)
-        {
-            int id = CreatePlayer(s);
-            s->netToLocal[i] = id;
-            printf("New Player %d\n", id);
-        }
-        s->bodies[localId].position.x = netState->players[i].x;
-        s->bodies[localId].position.y = netState->players[i].y;
-        s->bodies[localId].position.z = netState->players[i].z;
-    }
-    if (netState->connected)
-    {
-        NetSendLocalPos(
-            s->bodies[s->localId].position.x,
-            s->bodies[s->localId].position.y,
-            s->bodies[s->localId].position.z);
-    }
+    GameState *s = (GameState *)self->state;
+    Update_NetSync(s, dt);
 
     debugs[DEBUG_FRAMERATE].value = GetFPS();
     debugs[DEBUG_LOCALID].value = s->localId;
-    debugs[DEBUG_ENTITIES].value = s->entities;
+    debugs[DEBUG_ENTITIES].value = s->entities.count;
     debugs[DEBUG_NETID].value = s->netLocalId;
 }
 
 static void Tick(World *self, float dt)
 {
-    State *s = (State *)self->state;
+    GameState *s = (GameState *)self->state;
     if (IsKeyPressed(KEY_BACKSPACE))
         SwitchWorld(CreateMenuWorld());
     if (IsKeyPressed(KEY_ESCAPE) && IsCursorHidden())
@@ -144,18 +98,20 @@ static void Tick(World *self, float dt)
     if (IsCursorHidden())
         Update_Cam(&globalCamera, &s->bodies[s->localId], &s->camControl);
 
-    Update_Input(s->inputs, s->entities, s->localId, globalCamera);
-    Update_Move(s->inputs, s->bodies, s->entities, dt);
-    Update_Physx(s->bodies, s->entities, dt);
+    Update_Input(s->inputs, &s->entities, s->localId, globalCamera);
+    Update_Move(s->inputs, s->bodies, &s->entities, dt);
+    Update_Physx(s->bodies, &s->entities, dt);
 }
 
 static void Draw(World *self)
 {
-    State *s = (State *)self->state;
+    GameState *s = (GameState *)self->state;
 
     BeginMode3D(globalCamera);
-    for (int i = 0; i < s->entities; i++)
+    for (int i = 0; i < MAX_ENTITIES; i++)
     {
+        if (!s->entities.active[i])
+            continue;
         Body body = s->bodies[i];
         DrawModel(*s->playerModel, body.position, 1.0f, RED);
         DrawModelWires(*s->playerModel, body.position, 1, BLACK);
@@ -171,31 +127,11 @@ static void Draw(World *self)
 
 static void Exit(World *self)
 {
-    State *s = (State *)self->state;
+    GameState *s = (GameState *)self->state;
     UnloadModel(s->knotModel);
 }
 
-// typedef struct
-// {
-//     World world;
-//     State state;
-// } Container;
-// World *CreateLevel1World()
-// {
-//     Container *w = malloc(sizeof(Container));
-
-//     w->world.Init = Init;
-//     w->world.Step = Step;
-//     w->world.Tick = Tick;
-//     w->world.Draw = Draw;
-//     w->world.Exit = Exit;
-
-//     w->world.state = &w->state;
-
-//     return (World *)w;
-// }
-
-static State GameState = {
+static GameState gameState = {
     .entities = 0,
 };
 static World GameWorld = {
@@ -205,11 +141,10 @@ static World GameWorld = {
     .Draw = Draw,
     .Exit = Exit,
     .staticFlag = 1,
-    .state = &GameState,
+    .state = &gameState,
 };
 
 World *GetGameWorld()
 {
     return &GameWorld;
 }
-

@@ -1,10 +1,14 @@
 #include "PhysxSystem.h"
 #include "raymath.h"
+#include "core/GameWorld.h"
 
-void Update_Physx(Body *bodies, int entities, float dt)
+void Update_Physx(Body *bodies, Entities *entities, float dt)
 {
-    for (int i = 0; i < entities; i++)
+    for (int i = 0; i < entities->count; i++)
     {
+        if (!entities->active[i])
+            continue;
+
         Body *body = &bodies[i];
         if (body->mass > 0)
             body->velocity.y -= 9.81f * dt;

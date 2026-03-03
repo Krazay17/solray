@@ -1,10 +1,13 @@
 #include "MoveSystem.h"
 #include "raymath.h"
+#include "core/GameWorld.h"
 
-void Update_Move(Input *inputs, Body *bodies, int entities, float dt)
+void Update_Move(Input *inputs, Body *bodies, Entities *entities, float dt)
 {
-    for (int i = 0; i < entities; i++)
+    for (int i = 0; i < entities->count; i++)
     {
+        if (!entities->active[i])
+            continue;
         Input *input = &inputs[i];
         Body *body = &bodies[i];
 

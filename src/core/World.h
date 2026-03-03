@@ -1,4 +1,5 @@
 #pragma once
+#include <stdbool.h>
 
 typedef struct World World;
 typedef void (*WorldInit)(World *self);
@@ -14,6 +15,6 @@ struct World
     WorldTick Tick;
     WorldDraw Draw;
     WorldExit Exit;
-    uint8_t staticFlag;
+    bool staticFlag;
     void *state;
 };

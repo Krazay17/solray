@@ -1,11 +1,14 @@
 #include "App.h"
-#include "apps/World.h"
+#include "World.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include "LocalConfig.h"
 #include "Loader.h"
 #include "net/Net.h"
 #include "GlobalState.h"
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 
 // Global definitions
 World *currentWorld = NULL;
@@ -48,6 +51,22 @@ static void PerformSwitchWorld()
         currentWorld->Init(currentWorld);
 }
 
+static void Cleanup()
+{
+    if (currentWorld)
+    {
+        currentWorld->Exit(currentWorld);
+        if (!currentWorld->staticFlag)
+            free(currentWorld);
+        currentWorld = NULL;
+    }
+
+    NetDeinit();
+    CloseLoader();
+    CloseAudioDevice();
+    CloseWindow();
+}
+
 void main_loop(void)
 {
     PerformSwitchWorld();
@@ -77,6 +96,13 @@ void main_loop(void)
     ClearBackground(DARKGRAY);
     w->Draw(w);
     EndDrawing();
+#ifdef __EMSCRIPTEN__
+    if (AppShouldClose || WindowShouldClose())
+    {
+        emscripten_cancel_main_loop();
+        Cleanup();
+    }
+#endif
 }
 
 void run()
@@ -100,24 +126,15 @@ void run()
     globalCamera.projection = CAMERA_PERSPECTIVE;
 
     SwitchWorld(CreateMenuWorld());
-
+#ifdef __EMSCRIPTEN__
+    emscripten_set_main_loop(main_loop, 0, 1);
+#else
     while (!AppShouldClose && !WindowShouldClose())
     {
         main_loop();
     }
-
-    if (currentWorld)
-    {
-        currentWorld->Exit(currentWorld);
-        if (!currentWorld->staticFlag)
-            free(currentWorld);
-        currentWorld = NULL;
-    }
-
-    NetDeinit();
-    CloseLoader();
-    CloseAudioDevice();
-    CloseWindow();
+#endif
+    Cleanup();
 }
 
 void Sol_LocalInit(SolConfig *config)
