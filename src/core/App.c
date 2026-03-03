@@ -38,7 +38,8 @@ static void PerformSwitchWorld()
     if (currentWorld)
     {
         currentWorld->Exit(currentWorld);
-        free(currentWorld);
+        if (!currentWorld->staticFlag)
+            free(currentWorld);
         currentWorld = NULL;
     }
     currentWorld = pendingWorld;
@@ -80,7 +81,7 @@ void main_loop(void)
 
 void run()
 {
-    
+
     SetConfigFlags(FLAG_MSAA_4X_HINT);
     InitWindow(1280, 720, "SolRay");
     SetExitKey(0);
@@ -108,7 +109,8 @@ void run()
     if (currentWorld)
     {
         currentWorld->Exit(currentWorld);
-        free(currentWorld);
+        if (!currentWorld->staticFlag)
+            free(currentWorld);
         currentWorld = NULL;
     }
 

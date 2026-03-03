@@ -5,7 +5,7 @@
 #include "core/Loader.h"
 
 // Forward declare the menu factory so we can return to it
-extern World *CreateLevel1World();
+extern World *GetGameWorld();
 extern World *CreateSettingsWorld();
 
 typedef enum
@@ -64,7 +64,7 @@ static void Tick(World *self, float dt)
         {
             if (i == BTN_START)
             {
-                SwitchWorld(CreateLevel1World());
+                SwitchWorld(GetGameWorld());
                 return;
             }
             if (i == BTN_SETTINGS)

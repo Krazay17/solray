@@ -43,7 +43,7 @@ int main()
             {
             case ENET_EVENT_TYPE_CONNECT:
             {
-                printf("A new client connected from %x:%u.\n", event.peer->address.host, event.peer->address.port);
+                printf("A new client connected from %u.\n", event.peer->address.port);
                 /* Store any relevant client information here. */
                 // 1. Get the unique ID ENet assigned to this connection (e.g., 0, 1, 2...)
                 int id = event.peer->incomingPeerID;
@@ -89,6 +89,8 @@ int main()
             }
 
             case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT:
+            {
+
                 int id = (int)(intptr_t)event.peer->data;
                 printf("Client %d timed out.\n", id);
 
@@ -98,7 +100,7 @@ int main()
                 }
                 event.peer->data = NULL;
                 break;
-
+            }
             case ENET_EVENT_TYPE_NONE:
                 break;
             default:
@@ -106,15 +108,17 @@ int main()
             }
         }
 
-        if(server->connectedPeers > 0){
+        if (server->connectedPeers > 0)
+        {
             ENetPacket *packet = enet_packet_create(&worldState,
                                                     sizeof(WorldState),
                                                     ENET_PACKET_FLAG_UNRELIABLE_FRAGMENT);
             enet_host_broadcast(server, 0, packet);
             enet_host_flush(server);
         }
-
+#if _WIN32
         Sleep(16);
+#endif
     }
 
     enet_host_destroy(server);

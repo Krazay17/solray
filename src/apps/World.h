@@ -14,5 +14,6 @@ struct World
     WorldTick Tick;
     WorldDraw Draw;
     WorldExit Exit;
+    uint8_t staticFlag;
     void *state;
 };

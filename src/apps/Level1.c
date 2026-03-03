@@ -175,22 +175,41 @@ static void Exit(World *self)
     UnloadModel(s->knotModel);
 }
 
-typedef struct
+// typedef struct
+// {
+//     World world;
+//     State state;
+// } Container;
+// World *CreateLevel1World()
+// {
+//     Container *w = malloc(sizeof(Container));
+
+//     w->world.Init = Init;
+//     w->world.Step = Step;
+//     w->world.Tick = Tick;
+//     w->world.Draw = Draw;
+//     w->world.Exit = Exit;
+
+//     w->world.state = &w->state;
+
+//     return (World *)w;
+// }
+
+static State GameState = {
+    .entities = 0,
+};
+static World GameWorld = {
+    .Init = Init,
+    .Step = Step,
+    .Tick = Tick,
+    .Draw = Draw,
+    .Exit = Exit,
+    .staticFlag = 1,
+    .state = &GameState,
+};
+
+World *GetGameWorld()
 {
-    World world;
-    State state;
-} Container;
-World *CreateLevel1World()
-{
-    Container *w = malloc(sizeof(Container));
-
-    w->world.Init = Init;
-    w->world.Step = Step;
-    w->world.Tick = Tick;
-    w->world.Draw = Draw;
-    w->world.Exit = Exit;
-
-    w->world.state = &w->state;
-
-    return (World *)w;
+    return &GameWorld;
 }
+

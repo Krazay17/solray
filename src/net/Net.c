@@ -31,7 +31,7 @@ bool NetConnect(const char *ip, int port)
     server_peer = enet_host_connect(internal_client, &address, 2, 0);
     ENetEvent event = {0};
     /* Wait up to 5 seconds for the connection attempt to succeed. */
-    if (enet_host_service(internal_client, &event, 2000) > 0 &&
+    if (enet_host_service(internal_client, &event, 1000) > 0 &&
         event.type == ENET_EVENT_TYPE_CONNECT)
     {
         printf("Connected to: %d at: %d\n", address.host, address.port);
