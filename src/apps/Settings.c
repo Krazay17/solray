@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include "ui/Button.h"
 #include "core/GlobalState.h"
+#include "core/LocalConfig.h"
 #include "raymath.h"
 
 extern World *CreateMenuWorld();
@@ -56,9 +57,9 @@ static void Init(World *self)
     }
 
     s->sliders[SLDR_VOLUME].text = "Volume";
-    s->sliders[SLDR_VOLUME].value = GetMasterVolume();
+    s->sliders[SLDR_VOLUME].value = LocalConfig.volume;
     s->sliders[SLRD_OPACITY].text = "Opacity";
-    s->sliders[SLRD_OPACITY].value = WindowOpacity;
+    s->sliders[SLRD_OPACITY].value = LocalConfig.opacity;
 }
 
 static void Step(World *self, float delta)
@@ -87,14 +88,23 @@ static void Tick(World *self, float dt)
     {
         if (UpdateSlider(&s->sliders[i]))
         {
+            float value = s->sliders[i].value;
+
             if (i == SLDR_VOLUME)
-                SetMasterVolume(s->sliders[i].value);
+            {
+                SetMasterVolume(value);
+                LocalConfig.volume = value;
+            }
             if (i == SLRD_OPACITY)
             {
-                float limit = Lerp(0.2f, 1.0f, s->sliders[i].value);
+                float limit = Lerp(0.2f, 1.0f, value);
                 SetWindowOpacity(limit);
-                WindowOpacity = limit;
+                LocalConfig.opacity = limit;
             }
+        }
+        if (s->sliders[i].wasPressed && !s->sliders[i].isPressed)
+        {
+            Save_Config(&LocalConfig);
         }
     }
 }

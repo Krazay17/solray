@@ -31,10 +31,11 @@ bool NetConnect(const char *ip, int port)
     server_peer = enet_host_connect(internal_client, &address, 2, 0);
     ENetEvent event = {0};
     /* Wait up to 5 seconds for the connection attempt to succeed. */
-    if (enet_host_service(internal_client, &event, 5000) > 0 &&
+    if (enet_host_service(internal_client, &event, 500) > 0 &&
         event.type == ENET_EVENT_TYPE_CONNECT)
     {
-        puts("Connection to some.server.net:1234 succeeded.");
+        printf("Connected to: %d at: %d\n", address.host, address.port);
+        internal_state.connected = true;
     }
     else
     {
@@ -42,7 +43,7 @@ bool NetConnect(const char *ip, int port)
         /* received. Reset the peer in the event the 5 seconds   */
         /* had run out without any significant event.            */
         enet_peer_reset(server_peer);
-        puts("Connection to some.server.net:1234 failed.");
+        puts("Connection to some.server.net:1234 failed.\n");
     }
     return server_peer != NULL;
 }
@@ -59,16 +60,23 @@ void NetService(void)
         switch (event.type)
         {
         case ENET_EVENT_TYPE_CONNECT:
-            printf("Client Connected");
-            internal_state.connected = true;
+            printf("Client ReConnected\n");
             break;
         case ENET_EVENT_TYPE_RECEIVE:
         {
-            RemotePlayer *inc = (RemotePlayer *)event.packet->data;
-            if (inc->id >= 0 && inc->id < MAX_PLAYERS)
+            // Welcome Packet
+            if (event.packet->dataLength == sizeof(int32_t))
             {
-                internal_state.players[inc->id] = *inc;
-                internal_state.players[inc->id].active = true;
+                int id = *(int32_t *)event.packet->data;
+                internal_state.localId = id;
+                internal_state.connected = true;
+
+                printf("Welcome Packet ID: %d\n", id);
+            }
+            else if (event.packet->dataLength == sizeof(WorldState))
+            {
+                WorldState *inc = (WorldState *)event.packet->data;
+                memcpy(internal_state.players, inc->players, sizeof(RemotePlayer) * MAX_CLIENTS);
             }
             enet_packet_destroy(event.packet);
             break;
@@ -81,9 +89,9 @@ void NetService(void)
     }
 }
 
-void NetPoll(NetState *outState)
+const NetState *NetPoll(void)
 {
-    *outState = internal_state;
+    return &internal_state;
 }
 
 void NetSendLocalPos(float x, float y, float z)

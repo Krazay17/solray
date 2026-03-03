@@ -65,13 +65,11 @@ static void Tick(World *self, float dt)
             if (i == BTN_START)
             {
                 SwitchWorld(CreateLevel1World());
-                PlaySound(GetRM()->audio.beep2);
                 return;
             }
             if (i == BTN_SETTINGS)
             {
                 SwitchWorld(CreateSettingsWorld());
-                PlaySound(GetRM()->audio.beep2);
                 return;
             }
             if (i == BTN_QUIT)

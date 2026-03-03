@@ -36,6 +36,7 @@ bool UpdateSlider(Slider *slider)
     float lastValue = slider->value;
     Vector2 mouse = GetMousePosition();
     slider->wasHovered = slider->isHovered;
+    slider->wasPressed = slider->isPressed;
     slider->isHovered = CheckCollisionPointRec(mouse, slider->bg);
 
     if (slider->isHovered && IsMouseButtonDown(MOUSE_LEFT_BUTTON))

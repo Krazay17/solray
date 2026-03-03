@@ -2,6 +2,6 @@
 
 int main(void)
 {
-    main_loop();
+    run();
     return 0;
 }

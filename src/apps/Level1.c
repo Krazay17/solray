@@ -1,4 +1,5 @@
 #include "core/App.h"
+#include <stdio.h>
 #include "World.h"
 #include "modules/InputSystem.h"
 #include "modules/MoveSystem.h"
@@ -7,6 +8,7 @@
 #include <stdlib.h>
 #include "core/Loader.h"
 #include "net/Net.h"
+#include "ui/Debug.h"
 
 // Forward declare the menu factory so we can return to it
 extern World *CreateMenuWorld();
@@ -23,9 +25,13 @@ typedef struct
     int entities;
     int localId;
 
+    int netLocalId;
+    int netToLocal[MAX_CLIENTS];
+
     Input inputs[MAX_ENTITIES];
     Body bodies[MAX_ENTITIES];
     CamControl camControl;
+
 } State;
 
 static int AddEntity(State *s)
@@ -37,11 +43,11 @@ static int AddEntity(State *s)
     s->entities++;
     return id;
 }
-static void CreatePlayer(State *s)
+static int CreatePlayer(State *s)
 {
-    s->localId = AddEntity(s);
+    int id = AddEntity(s);
 
-    s->bodies[s->localId] = (Body){
+    s->bodies[id] = (Body){
         .position = (Vector3){0, 5, 0},
         .velocity = (Vector3){0, 5, 0},
         .accelG = 15.0f,
@@ -57,16 +63,21 @@ static void CreatePlayer(State *s)
         .pitch = 0,
         .sens = 0.2f,
     };
+
+    return id;
 }
 
 static void Init(World *self)
 {
     State *s = (State *)self->state;
-
     s->entities = 0;
     s->playerModel = &GetRM()->draw.cylinderModel;
     s->knotMesh = GenMeshKnot(1, 1, 12, 24);
     s->knotModel = LoadModelFromMesh(s->knotMesh);
+    s->localId = 0;
+    s->netLocalId = -1;
+    for (int i = 0; i < MAX_CLIENTS; i++)
+        s->netToLocal[i] = -1;
 
     DisableCursor();
     PlaySound(GetRM()->audio.woong1);
@@ -77,7 +88,43 @@ static void Init(World *self)
 static void Step(World *self, float dt)
 {
     State *s = (State *)self->state;
-    NetPoll(&s->network);
+    const NetState *netState = NetPoll();
+
+    if (s->netLocalId == -1 && netState->localId != -1)
+    {
+        s->netLocalId = netState->localId;
+        s->netToLocal[netState->localId] = 0;
+    }
+
+    for (int i = 0; i < MAX_CLIENTS; i++)
+    {
+        if (!netState->players[i].active || s->netLocalId == i)
+            continue;
+
+        int localId = s->netToLocal[i];
+
+        if (localId == -1)
+        {
+            int id = CreatePlayer(s);
+            s->netToLocal[i] = id;
+            printf("New Player %d\n", id);
+        }
+        s->bodies[localId].position.x = netState->players[i].x;
+        s->bodies[localId].position.y = netState->players[i].y;
+        s->bodies[localId].position.z = netState->players[i].z;
+    }
+    if (netState->connected)
+    {
+        NetSendLocalPos(
+            s->bodies[s->localId].position.x,
+            s->bodies[s->localId].position.y,
+            s->bodies[s->localId].position.z);
+    }
+
+    debugs[DEBUG_FRAMERATE].value = GetFPS();
+    debugs[DEBUG_LOCALID].value = s->localId;
+    debugs[DEBUG_ENTITIES].value = s->entities;
+    debugs[DEBUG_NETID].value = s->netLocalId;
 }
 
 static void Tick(World *self, float dt)
@@ -119,7 +166,7 @@ static void Draw(World *self)
     DrawGrid(50, 1.0f);
     EndMode3D();
 
-    DrawText("LEVEL 1", 10, 10, 20, DARKGRAY);
+    Draw_Debug(debugs, DEBUG_COUNT);
 }
 
 static void Exit(World *self)
