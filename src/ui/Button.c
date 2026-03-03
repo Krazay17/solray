@@ -42,6 +42,11 @@ bool UpdateSlider(Slider *slider)
     if (slider->isHovered && IsMouseButtonDown(MOUSE_LEFT_BUTTON))
     {
         slider->isPressed = 1;
+    }
+    else if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON))
+        slider->isPressed = 0;
+    if (slider->isPressed)
+    {
         float localX = mouse.x - slider->bg.x;
         float newValue = localX / slider->bg.width;
         if (newValue < 0.0f)
@@ -54,8 +59,6 @@ bool UpdateSlider(Slider *slider)
             return true;
         }
     }
-    else
-        slider->isPressed = 0;
     return false;
 }
 

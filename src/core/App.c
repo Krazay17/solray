@@ -91,7 +91,7 @@ void run()
     Sol_LocalInit(&LocalConfig);
 
     if (NetInit())
-        NetConnect("srv.solblade.online", 8080);
+        NetConnect("answer-cuba.gl.at.ply.gg", 35101);
 
     globalCamera.position = (Vector3){10, 10, 10};
     globalCamera.up = (Vector3){0, 1, 0};

@@ -29,7 +29,7 @@ int main()
         return 1;
     }
 
-    printf("Server started on port 7777...\n");
+    printf("Server started on port 8080...\n");
 
     ENetEvent event;
 
@@ -53,23 +53,23 @@ int main()
 
                 // 3. Initialize that slot in your world state
                 worldState.players[id].id = id;
-                worldState.players[id].active = true;
-                int32_t welcomeData = (int32_t)id;
-                ENetPacket *packet = enet_packet_create(&welcomeData, sizeof(int32_t), ENET_PACKET_FLAG_RELIABLE);
+                worldState.players[id].active = 1;
+                uint8_t welcomeData = (uint8_t)id;
+                ENetPacket *packet = enet_packet_create(&welcomeData, sizeof(uint8_t), ENET_PACKET_FLAG_RELIABLE);
                 enet_peer_send(event.peer, 1, packet);
                 break;
             }
 
             case ENET_EVENT_TYPE_RECEIVE:
-                if (event.packet->dataLength == sizeof(RemotePlayer))
+                if (event.packet->dataLength == sizeof(PlayerPacket))
                 {
                     int clientId = (int)(intptr_t)event.peer->data;
-                    
-                    RemotePlayer *p = (RemotePlayer *)event.packet->data;
-                    printf("X: %f Y: %f Z: %f ID: %d\n", p->x, p->y, p->z, clientId);
+
+                    PlayerPacket *p = (PlayerPacket *)event.packet->data;
                     worldState.players[clientId].x = p->x;
                     worldState.players[clientId].y = p->y;
                     worldState.players[clientId].z = p->z;
+                    worldState.players->inputState = p->inputState;
                 }
                 /* Clean up the packet now that we're done using it. */
                 enet_packet_destroy(event.packet);
@@ -82,15 +82,20 @@ int main()
 
                 if (id >= 0 && id < MAX_CLIENTS)
                 {
-                    worldState.players[id].active = false;
+                    worldState.players[id].active = 0;
                 }
                 event.peer->data = NULL;
                 break;
             }
 
             case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT:
-                printf("%s disconnected due to timeout.\n", event.peer->data);
-                /* Reset the peer's client information. */
+                int id = (int)(intptr_t)event.peer->data;
+                printf("Client %d timed out.\n", id);
+
+                if (id >= 0 && id < MAX_CLIENTS)
+                {
+                    worldState.players[id].active = 0;
+                }
                 event.peer->data = NULL;
                 break;
 
@@ -101,11 +106,13 @@ int main()
             }
         }
 
-        ENetPacket *packet = enet_packet_create(&worldState,
-                                                sizeof(WorldState),
-                                                ENET_PACKET_FLAG_UNRELIABLE_FRAGMENT);
-        enet_host_broadcast(server, 0, packet);
-        enet_host_flush(server);
+        if(server->connectedPeers > 0){
+            ENetPacket *packet = enet_packet_create(&worldState,
+                                                    sizeof(WorldState),
+                                                    ENET_PACKET_FLAG_UNRELIABLE_FRAGMENT);
+            enet_host_broadcast(server, 0, packet);
+            enet_host_flush(server);
+        }
 
         Sleep(16);
     }

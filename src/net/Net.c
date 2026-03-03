@@ -31,7 +31,7 @@ bool NetConnect(const char *ip, int port)
     server_peer = enet_host_connect(internal_client, &address, 2, 0);
     ENetEvent event = {0};
     /* Wait up to 5 seconds for the connection attempt to succeed. */
-    if (enet_host_service(internal_client, &event, 500) > 0 &&
+    if (enet_host_service(internal_client, &event, 2000) > 0 &&
         event.type == ENET_EVENT_TYPE_CONNECT)
     {
         printf("Connected to: %d at: %d\n", address.host, address.port);
@@ -65,9 +65,9 @@ void NetService(void)
         case ENET_EVENT_TYPE_RECEIVE:
         {
             // Welcome Packet
-            if (event.packet->dataLength == sizeof(int32_t))
+            if (event.packet->dataLength == sizeof(uint8_t))
             {
-                int id = *(int32_t *)event.packet->data;
+                int id = *(uint8_t *)event.packet->data;
                 internal_state.localId = id;
                 internal_state.connected = true;
 
@@ -76,7 +76,7 @@ void NetService(void)
             else if (event.packet->dataLength == sizeof(WorldState))
             {
                 WorldState *inc = (WorldState *)event.packet->data;
-                memcpy(internal_state.players, inc->players, sizeof(RemotePlayer) * MAX_CLIENTS);
+                memcpy(internal_state.players, inc->players, sizeof(PlayerPacket) * MAX_CLIENTS);
             }
             enet_packet_destroy(event.packet);
             break;
@@ -99,8 +99,8 @@ void NetSendLocalPos(float x, float y, float z)
     if (!server_peer)
         return;
 
-    RemotePlayer myMsg = {.id = internal_state.localId, .x = x, .y = y, .z = z};
-    ENetPacket *packet = enet_packet_create(&myMsg, sizeof(RemotePlayer), ENET_PACKET_FLAG_UNRELIABLE_FRAGMENT);
+    PlayerPacket myMsg = {.id = internal_state.localId, .x = x, .y = y, .z = z};
+    ENetPacket *packet = enet_packet_create(&myMsg, sizeof(PlayerPacket), ENET_PACKET_FLAG_UNRELIABLE_FRAGMENT);
     enet_peer_send(server_peer, 0, packet);
 }
 

@@ -4,7 +4,7 @@
 
 typedef struct
 {
-    RemotePlayer players[MAX_CLIENTS];
+    PlayerPacket players[MAX_CLIENTS];
     int localId;    // The ID the server gave US
     bool connected; // Are we actually talking to a server?
     int length;
