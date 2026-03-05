@@ -15,56 +15,19 @@ float TimeStep = 1.0f / 60.0f;
 bool AppShouldClose = false;
 SolConfig LocalConfig = {0};
 
-static World *persistentWorld = NULL;
+EngineState engineState = {0};
+
 static World *currentWorld = NULL;
 static World *pendingWorld = NULL;
 static float Accumulator = 0.0f;
 
-void SwitchWorld(World *world)
-{
-    if (pendingWorld)
-    {
-        pendingWorld->Exit(pendingWorld);
-        free(pendingWorld);
-    }
-    pendingWorld = world;
-}
-
-static void PerformSwitchWorld()
-{
-    if (!pendingWorld)
-        return;
-    if (currentWorld)
-    {
-        currentWorld->Exit(currentWorld);
-        if (!currentWorld->staticFlag)
-        {
-            currentWorld->Kill(currentWorld);
-            free(currentWorld);
-        }
-        currentWorld = NULL;
-    }
-    currentWorld = pendingWorld;
-    pendingWorld = NULL;
-
-    if (currentWorld && !currentWorld->initialized)
-    {
-        currentWorld->Init(currentWorld);
-        currentWorld->initialized = 1;
-    }
-    if (currentWorld && currentWorld->Open)
-        currentWorld->Open(currentWorld);
-}
-
 static void Cleanup()
 {
-    if (currentWorld)
+    for (int i = 0; i < WORLD_COUNT; i++)
     {
-        if (currentWorld->Kill)
-            currentWorld->Kill(currentWorld);
-        if (!currentWorld->staticFlag)
-            free(currentWorld);
-        currentWorld = NULL;
+        World *w = engineState.worlds[i];
+        if (w && w->Kill)
+            w->Kill(w);
     }
 
     NetDeinit();
@@ -75,34 +38,58 @@ static void Cleanup()
 
 void main_loop(void)
 {
-    PerformSwitchWorld();
-    World *w = currentWorld;
-    World *p = persistentWorld;
-    if (!w)
-    {
-        BeginDrawing();
-        ClearBackground(BLACK);
-        DrawText("No World Loaded", 10, 10, 20, RED);
-        EndDrawing();
-        return;
-    }
-
     float dt = GetFrameTime();
     NetService();
+    if (IsKeyPressed(KEY_LEFT_ALT))
+    {
+        if (IsCursorHidden())
+            ShowCursor();
+    }
+
+    if (GetScreenWidth() != engineState.width || GetScreenHeight() != engineState.height)
+    {
+        SyncWindowSize();
+    }
+
+    for (int i = WORLD_COUNT - 1; i >= 0; i--)
+    {
+        World *w = engineState.worlds[i];
+        if (w && w->active && w->Poll)
+        {
+            if (w->Poll(w, dt))
+                break;
+        }
+    }
 
     Accumulator += dt;
     while (Accumulator > TimeStep)
     {
-        w->Step(w, TimeStep);
+        for (int i = 0; i < WORLD_COUNT; i++)
+        {
+            World *w = engineState.worlds[i];
+            if (w && w->active && w->Step)
+                w->Step(w, TimeStep);
+        }
         Accumulator -= TimeStep;
     }
 
-    w->Tick(w, dt);
+    for (int i = 0; i < WORLD_COUNT; i++)
+    {
+        World *w = engineState.worlds[i];
+        if (w && w->active && w->Tick)
+            w->Tick(w, dt);
+    }
 
     BeginDrawing();
     ClearBackground(DARKGRAY);
-    w->Draw(w);
+    for (int i = 0; i < WORLD_COUNT; i++)
+    {
+        World *w = engineState.worlds[i];
+        if (w && w->active && w->Draw)
+            w->Draw(w);
+    }
     EndDrawing();
+
 #ifdef __EMSCRIPTEN__
     if (AppShouldClose || WindowShouldClose())
     {
@@ -116,7 +103,9 @@ void run()
 {
     SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_WINDOW_HIGHDPI | FLAG_WINDOW_ALWAYS_RUN);
     SetWindowState(FLAG_WINDOW_RESIZABLE);
-    InitWindow(1280, 720, "SolRay");
+    engineState.width = 1280;
+    engineState.height = 720;
+    InitWindow(engineState.width, engineState.height, "SolRay");
     SetExitKey(0);
     InitAudioDevice();
     SetTargetFPS(2000);
@@ -127,8 +116,7 @@ void run()
     if (NetInit())
         NetConnect("answer-cuba.gl.at.ply.gg", 35101);
 
-    persistentWorld = GetSettingsWorld();
-    SwitchWorld(GetMenuWorld());
+    InitWorlds();
 
 #ifdef __EMSCRIPTEN__
     emscripten_set_main_loop(main_loop, 0, 1);
@@ -139,7 +127,7 @@ void run()
         main_loop();
     }
     Cleanup();
-    
+
 #endif
 }
 
@@ -147,4 +135,70 @@ void Sol_LocalInit(SolConfig *config)
 {
     SetMasterVolume(config->volume);
     SetWindowOpacity(config->opacity);
+}
+
+static void InitWorlds()
+{
+    World *menu = engineState.worlds[WORLD_MENU] = GetMenuWorld();
+    if (!menu->initialized)
+    {
+        menu->Init(menu);
+        menu->initialized = true;
+    }
+
+    World *game = engineState.worlds[WORLD_GAME] = GetGameWorld();
+    if (!game->initialized)
+    {
+        game->Init(game);
+        game->initialized = true;
+    }
+}
+
+void SyncWindowSize()
+{
+    engineState.width = GetScreenWidth();
+    engineState.height = GetScreenHeight();
+}
+
+void OpenWorld(WorldId id)
+{
+    for (int i = 0; i < id; i++)
+    {
+        World *ew = engineState.worlds[i];
+        if (ew && ew->Exit)
+            ew->Exit(ew);
+    }
+    World *w = engineState.worlds[id];
+    if (w)
+    {
+        w->active = 1;
+        if (w->Open)
+            w->Open(w);
+    }
+}
+
+void ChangeMenu(World *newMenu)
+{
+    World *oldMenu = engineState.worlds[WORLD_MENU];
+
+    if (oldMenu && oldMenu->Exit)
+    {
+        oldMenu->Exit(oldMenu);
+    }
+
+    engineState.worlds[WORLD_MENU] = newMenu;
+
+    if (newMenu)
+    {
+        if (!newMenu->initialized)
+        {
+            newMenu->Init(newMenu);
+            newMenu->initialized = true;
+        }
+        if (newMenu->Open)
+        {
+            newMenu->Open(newMenu);
+        }
+        newMenu->active = true;
+    }
 }

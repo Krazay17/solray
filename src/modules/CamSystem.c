@@ -1,20 +1,23 @@
 #include "CamSystem.h"
 #include "raymath.h"
 
-void Cam_Update(Camera3D *cam, Body *body, CamControl *ctrl)
+void Cam_Update(Camera3D *cam, Body *body, CamControl *ctrl, bool locked)
 {
-    // 1. Get Mouse Delta (How much did the mouse move this frame?)
-    Vector2 mouseDelta = GetMouseDelta();
+    if (locked)
+    {
+        // 1. Get Mouse Delta (How much did the mouse move this frame?)
+        Vector2 mouseDelta = GetMouseDelta();
 
-    // 2. Update Euler Angles
-    ctrl->yaw += mouseDelta.x * ctrl->sens;
-    ctrl->pitch -= mouseDelta.y * ctrl->sens;
+        // 2. Update Euler Angles
+        ctrl->yaw += mouseDelta.x * ctrl->sens;
+        ctrl->pitch -= mouseDelta.y * ctrl->sens;
 
-    // 3. Clamp Pitch (Prevent the camera from flipping upside down)
-    if (ctrl->pitch > 89.0f)
-        ctrl->pitch = 89.0f;
-    if (ctrl->pitch < -89.0f)
-        ctrl->pitch = -89.0f;
+        // 3. Clamp Pitch (Prevent the camera from flipping upside down)
+        if (ctrl->pitch > 89.0f)
+            ctrl->pitch = 89.0f;
+        if (ctrl->pitch < -89.0f)
+            ctrl->pitch = -89.0f;
+    }
 
     // 4. Calculate Direction Vector from Angles
     Vector3 direction;

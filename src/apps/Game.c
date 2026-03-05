@@ -75,8 +75,30 @@ static void Init(World *self)
 
 static void Open(World *self)
 {
+    engineState.worlds[WORLD_MENU]->active = false;
     DisableCursor();
     PlaySound(GetRM()->audio.woong1);
+}
+
+static bool Poll(World *self, float dt)
+{
+    if(IsKeyPressed(KEY_ESCAPE))
+    {
+        ChangeMenu(GetMenuWorld());
+        OpenWorld(WORLD_MENU);
+        return true;
+    }
+    GameState *s = (GameState *)self->state;
+    Input_Update(s->inputs, &s->entities, s->localId, &globalCamera);
+    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+    {
+        if (IsCursorHidden())
+            PlaySound(GetRM()->audio.pistolFire);
+        else
+            DisableCursor();
+        return true;
+    }
+    return false;
 }
 
 static void Step(World *self, float dt)
@@ -91,21 +113,8 @@ static void Step(World *self, float dt)
 static void Tick(World *self, float dt)
 {
     GameState *s = (GameState *)self->state;
-    if (IsKeyPressed(KEY_BACKSPACE))
-        SwitchWorld(GetMenuWorld());
-    if (IsKeyPressed(KEY_ESCAPE) && IsCursorHidden())
-        EnableCursor();
-    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
-    {
-        if (IsCursorHidden())
-            PlaySound(GetRM()->audio.pistolFire);
-        else
-            DisableCursor();
-    }
-    if (IsCursorHidden())
-        Cam_Update(&globalCamera, &s->bodies[s->localId], &s->camControl);
 
-    Input_Update(s->inputs, &s->entities, s->localId, &globalCamera);
+    Cam_Update(&globalCamera, &s->bodies[s->localId], &s->camControl, IsCursorHidden());
     Move_Update(s->inputs, s->bodies, &s->entities, dt);
     Update_Physx(s->bodies, &s->entities, dt);
 }
@@ -147,6 +156,7 @@ static GameState gameState = {0};
 static World GameWorld = {
     .Init = Init,
     .Open = Open,
+    .Poll = Poll,
     .Step = Step,
     .Tick = Tick,
     .Draw = Draw,

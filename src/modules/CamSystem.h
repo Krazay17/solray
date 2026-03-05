@@ -9,4 +9,4 @@ typedef struct
     float sens;
 } CamControl;
 
-void Cam_Update(Camera3D *cam, Body *body, CamControl *ctrl);
+void Cam_Update(Camera3D *cam, Body *body, CamControl *ctrl, bool locked);

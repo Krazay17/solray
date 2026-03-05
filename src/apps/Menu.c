@@ -45,14 +45,15 @@ static void Open(World *self)
         EnableCursor();
 }
 
-static void Step(World *self, float delta)
+static bool Poll(World *self, float dt)
 {
     State *s = (State *)self->state;
-}
-
-static void Tick(World *self, float dt)
-{
-    State *s = (State *)self->state;
+    bool consumed = false;
+    if (IsKeyPressed(KEY_ESCAPE))
+    {
+        OpenWorld(WORLD_GAME);
+        return true;
+    }
 
     for (int i = 0; i < BTN_COUNT; i++)
     {
@@ -62,28 +63,37 @@ static void Tick(World *self, float dt)
         }
         if (UpdateButton(&s->buttons[i], dt))
         {
+            consumed = true;
             if (i == BTN_START)
             {
-                SwitchWorld(GetGameWorld());
-                return;
+                OpenWorld(WORLD_GAME);
             }
-            if (i == BTN_SETTINGS)
+            else if (i == BTN_SETTINGS)
             {
-                SwitchWorld(GetSettingsWorld());
-                return;
+                ChangeMenu(GetSettingsWorld());
             }
-            if (i == BTN_QUIT)
+            else if (i == BTN_QUIT)
             {
                 AppShouldClose = true;
-                return;
             }
         }
     }
+    return consumed;
+}
+
+static void Step(World *self, float delta)
+{
+    State *s = (State *)self->state;
+}
+
+static void Tick(World *self, float dt)
+{
 }
 
 static void Draw(World *self)
 {
     State *s = (State *)self->state;
+    DrawRectangleGradientV(0, 0, engineState.width, engineState.height, BLACK, BLANK);
 
     for (int i = 0; i < BTN_COUNT; i++)
     {
@@ -108,6 +118,7 @@ static State menuState = {0};
 static World menuWorld = {
     .Init = Init,
     .Open = Open,
+    .Poll = Poll,
     .Step = Step,
     .Tick = Tick,
     .Draw = Draw,
@@ -115,6 +126,7 @@ static World menuWorld = {
     .Kill = Kill,
     .staticFlag = 1,
     .state = &menuState,
+    .active = 1,
 };
 
 World *GetMenuWorld()

@@ -77,82 +77,55 @@ static void Init(World *self)
 
 static void Open(World *self)
 {
+    if (IsCursorHidden())
+        EnableCursor();
 }
 
-static void Step(World *self, float delta)
+static bool Poll(World *self, float dt)
 {
     State *s = (State *)self->state;
-}
+    bool consumed = false;
 
-static void Tick(World *self, float dt)
-{
-    State *s = (State *)self->state;
-
-    if (IsKeyPressed(KEY_BACKSPACE))
-        SwitchWorld(GetMenuWorld());
-
-    float startY = 150.0f;
-    for (int i = 0; i < BTN_COUNT; i++)
+    // 1. Handle Global Input (Back to Menu)
+    if (IsKeyPressed(KEY_ESCAPE))
     {
-        if (UpdateButton(&s->buttons[i], dt))
-        {
-            if (i == BTN_FULLSCREEN)
-            {
-                if (s->windowState != WINDOWSTATE_FULLSCREEN)
-                    s->windowState = WINDOWSTATE_FULLSCREEN;
-                else
-                    s->windowState = WINDOWSTATE_WINDOWED;
-            }
-            if (i == BTN_BORDERLESS)
-            {
-                if (s->windowState != WINDOWSTATE_BORDERLESS)
-                    s->windowState = WINDOWSTATE_BORDERLESS;
-                else
-                    s->windowState = WINDOWSTATE_WINDOWED;
-            }
-            if (i == BTN_AONTOP)
-            {
-                s->onTop = !s->onTop;
-                if (s->onTop)
-                {
-                    SetWindowState(FLAG_WINDOW_TOPMOST);
-                    s->buttons[i].baseColor = GREEN;
-                }
-                else
-                {
-                    ClearWindowState(FLAG_WINDOW_TOPMOST);
-                    s->buttons[i].baseColor = GRAY;
-                }
-            }
-            switch (s->windowState)
-            {
-            case WINDOWSTATE_WINDOWED:
-                ClearWindowState(FLAG_FULLSCREEN_MODE | FLAG_BORDERLESS_WINDOWED_MODE);
-                s->buttons[BTN_FULLSCREEN].baseColor = GRAY;
-                s->buttons[BTN_BORDERLESS].baseColor = GRAY;
-                break;
-            case WINDOWSTATE_FULLSCREEN:
-                ClearWindowState(FLAG_BORDERLESS_WINDOWED_MODE);
-                SetWindowState(FLAG_FULLSCREEN_MODE);
-                s->buttons[BTN_FULLSCREEN].baseColor = GREEN;
-                s->buttons[BTN_BORDERLESS].baseColor = GRAY;
-                break;
-            case WINDOWSTATE_BORDERLESS:
-                ClearWindowState(FLAG_FULLSCREEN_MODE);
-                SetWindowState(FLAG_BORDERLESS_WINDOWED_MODE);
-                s->buttons[BTN_BORDERLESS].baseColor = GREEN;
-                s->buttons[BTN_FULLSCREEN].baseColor = GRAY;
-                break;
-            default:
-                break;
-            }
-        }
+        OpenWorld(WORLD_GAME);
+        return true;
     }
 
+    // 2. Handle Buttons
+    for (int i = 0; i < BTN_COUNT; i++)
+    {
+        // UpdateButton should check if mouse is over/clicking
+        if (UpdateButton(&s->buttons[i], dt))
+        {
+            consumed = true;
+
+            // Handle the specific logic for this button
+            if (i == BTN_FULLSCREEN)
+            {
+                s->windowState = (s->windowState == WINDOWSTATE_FULLSCREEN) ? WINDOWSTATE_WINDOWED : WINDOWSTATE_FULLSCREEN;
+            }
+            else if (i == BTN_BORDERLESS)
+            {
+                s->windowState = (s->windowState == WINDOWSTATE_BORDERLESS) ? WINDOWSTATE_WINDOWED : WINDOWSTATE_BORDERLESS;
+            }
+            else if (i == BTN_AONTOP)
+            {
+                s->onTop = !s->onTop;
+            }
+        }
+        // Even if not clicked, if it's hovered, we consume input to block layers below
+        if (s->buttons[i].isHovered)
+            consumed = true;
+    }
+
+    // 3. Handle Sliders
     for (int i = 0; i < SLDR_COUNT; i++)
     {
         if (UpdateSlider(&s->sliders[i]))
         {
+            consumed = true;
             float value = s->sliders[i].value;
 
             if (i == SLDR_VOLUME)
@@ -167,16 +140,69 @@ static void Tick(World *self, float dt)
                 LocalConfig.opacity = limit;
             }
         }
+
+        // Save config when the user lets go of the slider
         if (s->sliders[i].wasPressed && !s->sliders[i].isPressed)
         {
             Save_Config(&LocalConfig);
         }
+
+        if (s->sliders[i].isHovered || s->sliders[i].isPressed)
+            consumed = true;
+    }
+
+    return consumed;
+}
+
+static void Step(World *self, float delta)
+{
+    State *s = (State *)self->state;
+}
+
+static void Tick(World *self, float dt)
+{
+    State *s = (State *)self->state;
+
+    // Sync Window States
+    if (s->onTop)
+    {
+        SetWindowState(FLAG_WINDOW_TOPMOST);
+        s->buttons[BTN_AONTOP].baseColor = GREEN;
+    }
+    else
+    {
+        ClearWindowState(FLAG_WINDOW_TOPMOST);
+        s->buttons[BTN_AONTOP].baseColor = GRAY;
+    }
+
+    switch (s->windowState)
+    {
+    case WINDOWSTATE_WINDOWED:
+        ClearWindowState(FLAG_FULLSCREEN_MODE | FLAG_BORDERLESS_WINDOWED_MODE);
+        s->buttons[BTN_FULLSCREEN].baseColor = GRAY;
+        s->buttons[BTN_BORDERLESS].baseColor = GRAY;
+        break;
+    case WINDOWSTATE_FULLSCREEN:
+        ClearWindowState(FLAG_BORDERLESS_WINDOWED_MODE);
+        SetWindowState(FLAG_FULLSCREEN_MODE);
+        s->buttons[BTN_FULLSCREEN].baseColor = GREEN;
+        s->buttons[BTN_BORDERLESS].baseColor = GRAY;
+        break;
+    case WINDOWSTATE_BORDERLESS:
+        ClearWindowState(FLAG_FULLSCREEN_MODE);
+        SetWindowState(FLAG_BORDERLESS_WINDOWED_MODE);
+        s->buttons[BTN_BORDERLESS].baseColor = GREEN;
+        s->buttons[BTN_FULLSCREEN].baseColor = GRAY;
+        break;
     }
 }
 
 static void Draw(World *self)
 {
     State *s = (State *)self->state;
+
+    DrawRectangleGradientV(0, 0, engineState.width, engineState.height, BLACK, BLANK);
+
     for (int i = 0; i < BTN_COUNT; i++)
     {
         DrawButton(&s->buttons[i]);
@@ -204,6 +230,7 @@ State settingsState = {0};
 World settingsWorld = {
     .Init = Init,
     .Open = Open,
+    .Poll = Poll,
     .Step = Step,
     .Tick = Tick,
     .Draw = Draw,
