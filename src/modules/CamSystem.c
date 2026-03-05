@@ -1,7 +1,7 @@
 #include "CamSystem.h"
 #include "raymath.h"
 
-void Update_Cam(Camera3D *cam, Body *body, CamControl *ctrl)
+void Cam_Update(Camera3D *cam, Body *body, CamControl *ctrl)
 {
     // 1. Get Mouse Delta (How much did the mouse move this frame?)
     Vector2 mouseDelta = GetMouseDelta();

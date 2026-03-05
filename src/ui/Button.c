@@ -1,21 +1,62 @@
 #include "Button.h"
+#include <math.h>
+#include "raymath.h"
 
-bool UpdateButton(Button *btn)
+static float ButtonAnim(float dt, float value, float speed)
 {
+    speed = (speed > 0.0f) ? speed : 4.0f;
+    value -= dt * speed;
+    if (value < 0.0f)
+        value = 0.0f;
+    return value;
+}
+
+bool UpdateButton(Button *btn, float dt)
+{
+    if (btn->clickAnim > 0)
+        btn->clickAnim = ButtonAnim(dt, btn->clickAnim, btn->clickAnimSpeed);
+
     Vector2 mouse = GetMousePosition();
     btn->wasHovered = btn->isHovered;
     btn->isHovered = CheckCollisionPointRec(mouse, btn->rect);
 
-    if (btn->isHovered && IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
+    if (btn->isHovered)
     {
-        return true; // The button was clicked
+        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
+        {
+            btn->clickAnim = 1.0f;
+            return true; // The button was clicked
+        }
+
+        float speed = 5.0f;
+
+        // Normalize sin to 0.0f - 1.0f
+        float t = (sinf(GetTime() * speed) * 0.5f) + 0.5f;
+        btn->hoverAnim = Lerp(0.33f, 0.66f, t);
+    }
+    else
+    {
+        btn->hoverAnim = ButtonAnim(dt, btn->hoverAnim, 8.0f);
     }
     return false;
 }
 
 void DrawButton(Button *btn)
 {
-    Color drawColor = btn->isHovered ? SKYBLUE : btn->baseColor;
+    // Start with base
+    Color drawColor = btn->baseColor;
+
+    // Layer 1: Apply Hover Pulse (Glow white)
+    if (btn->hoverAnim > 0)
+    {
+        drawColor = ColorLerp(drawColor, WHITE, btn->hoverAnim);
+    }
+
+    // Layer 2: Apply Click Flash (Flash black/white)
+    if (btn->clickAnim > 0)
+    {
+        drawColor = ColorLerp(drawColor, BLACK, btn->clickAnim);
+    }
 
     DrawRectangleRec(btn->rect, drawColor);
     // Add a simple border if hovered
@@ -29,6 +70,12 @@ void DrawButton(Button *btn)
              btn->rect.x + (btn->rect.width / 2) - (textWidth / 2),
              btn->rect.y + (btn->rect.height / 2) - (fontSize / 2),
              fontSize, WHITE);
+}
+
+void Button_Reset(Button *btn)
+{
+    btn->clickAnim = 0;
+    btn->hoverAnim = 0;
 }
 
 bool UpdateSlider(Slider *slider)

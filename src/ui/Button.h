@@ -6,6 +6,10 @@ typedef struct
     Rectangle rect;
     Color baseColor;
     const char *text;
+    float clickAnim;
+    float hoverAnim;
+    float clickAnimSpeed;
+    float hoverAnimSpeed;
     bool isHovered;
     bool wasHovered;
     bool isPressed;
@@ -27,8 +31,9 @@ typedef struct
     bool wasPressed;
 } Slider;
 
-bool UpdateButton(Button *button);
+bool UpdateButton(Button *button, float dt);
 void DrawButton(Button *btn);
+void Button_Reset(Button *btn);
 
 bool UpdateSlider(Slider *slider);
 void DrawSlider(Slider *slider);

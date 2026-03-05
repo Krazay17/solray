@@ -7,6 +7,8 @@
 
 #define MAX_ENTITIES 100
 
+extern Camera3D globalCamera;
+
 typedef struct Entities
 {
     bool active[MAX_ENTITIES];

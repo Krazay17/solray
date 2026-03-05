@@ -7,13 +7,20 @@
 #include "core/LocalConfig.h"
 #include "raymath.h"
 
-extern World *CreateMenuWorld();
+typedef enum
+{
+    BTN_FULLSCREEN,
+    BTN_BORDERLESS,
+    BTN_AONTOP,
+    BTN_COUNT,
+} SettingsButtonId;
 
 typedef enum
 {
-    BTN_VOLUME,
-    BTN_COUNT,
-} SettingsButtonId;
+    WINDOWSTATE_WINDOWED,
+    WINDOWSTATE_FULLSCREEN,
+    WINDOWSTATE_BORDERLESS,
+} WindowState;
 
 typedef enum
 {
@@ -26,6 +33,10 @@ typedef struct
 {
     Button buttons[BTN_COUNT];
     Slider sliders[SLDR_COUNT];
+    WindowState windowState;
+    bool onTop;
+    bool borderless;
+    bool fullscreen;
 } State;
 
 static void Init(World *self)
@@ -36,7 +47,7 @@ static void Init(World *self)
     for (int i = 0; i < BTN_COUNT; i++)
     {
         s->buttons[i] = (Button){
-            .rect = {400.0f, startY + i * 60.0f, 100.0f, 50.0f},
+            .rect = {400.0f, startY + i * 60.0f, 150.0f, 30.0f},
             .baseColor = GRAY,
             .isPressed = false,
             .isHovered = false,
@@ -55,11 +66,17 @@ static void Init(World *self)
             .handleWidth = 15.0f,
         };
     }
-
+    s->buttons[BTN_AONTOP].text = "OnTop";
+    s->buttons[BTN_BORDERLESS].text = "Borderless";
+    s->buttons[BTN_FULLSCREEN].text = "Fullscreen";
     s->sliders[SLDR_VOLUME].text = "Volume";
     s->sliders[SLDR_VOLUME].value = LocalConfig.volume;
     s->sliders[SLRD_OPACITY].text = "Opacity";
     s->sliders[SLRD_OPACITY].value = LocalConfig.opacity;
+}
+
+static void Open(World *self)
+{
 }
 
 static void Step(World *self, float delta)
@@ -72,15 +89,63 @@ static void Tick(World *self, float dt)
     State *s = (State *)self->state;
 
     if (IsKeyPressed(KEY_BACKSPACE))
-        SwitchWorld(CreateMenuWorld());
+        SwitchWorld(GetMenuWorld());
 
     float startY = 150.0f;
     for (int i = 0; i < BTN_COUNT; i++)
     {
-        if (UpdateButton(&s->buttons[i]))
+        if (UpdateButton(&s->buttons[i], dt))
         {
-            if (i == BTN_VOLUME)
-                printf("Click Volume!");
+            if (i == BTN_FULLSCREEN)
+            {
+                if (s->windowState != WINDOWSTATE_FULLSCREEN)
+                    s->windowState = WINDOWSTATE_FULLSCREEN;
+                else
+                    s->windowState = WINDOWSTATE_WINDOWED;
+            }
+            if (i == BTN_BORDERLESS)
+            {
+                if (s->windowState != WINDOWSTATE_BORDERLESS)
+                    s->windowState = WINDOWSTATE_BORDERLESS;
+                else
+                    s->windowState = WINDOWSTATE_WINDOWED;
+            }
+            if (i == BTN_AONTOP)
+            {
+                s->onTop = !s->onTop;
+                if (s->onTop)
+                {
+                    SetWindowState(FLAG_WINDOW_TOPMOST);
+                    s->buttons[i].baseColor = GREEN;
+                }
+                else
+                {
+                    ClearWindowState(FLAG_WINDOW_TOPMOST);
+                    s->buttons[i].baseColor = GRAY;
+                }
+            }
+            switch (s->windowState)
+            {
+            case WINDOWSTATE_WINDOWED:
+                ClearWindowState(FLAG_FULLSCREEN_MODE | FLAG_BORDERLESS_WINDOWED_MODE);
+                s->buttons[BTN_FULLSCREEN].baseColor = GRAY;
+                s->buttons[BTN_BORDERLESS].baseColor = GRAY;
+                break;
+            case WINDOWSTATE_FULLSCREEN:
+                ClearWindowState(FLAG_BORDERLESS_WINDOWED_MODE);
+                SetWindowState(FLAG_FULLSCREEN_MODE);
+                s->buttons[BTN_FULLSCREEN].baseColor = GREEN;
+                s->buttons[BTN_BORDERLESS].baseColor = GRAY;
+                break;
+            case WINDOWSTATE_BORDERLESS:
+                ClearWindowState(FLAG_FULLSCREEN_MODE);
+                SetWindowState(FLAG_BORDERLESS_WINDOWED_MODE);
+                s->buttons[BTN_BORDERLESS].baseColor = GREEN;
+                s->buttons[BTN_FULLSCREEN].baseColor = GRAY;
+                break;
+            default:
+                break;
+            }
         }
     }
 
@@ -124,24 +189,54 @@ static void Draw(World *self)
 
 static void Exit(World *self)
 {
+    State *s = (State *)self->state;
+    for (int i = 0; i < BTN_COUNT; i++)
+    {
+        Button_Reset(&s->buttons[i]);
+    }
 }
 
-typedef struct
+static void Kill(World *self)
 {
-    World world;
-    State state;
-} Container;
-World *CreateSettingsWorld()
-{
-    Container *w = malloc(sizeof(Container));
-
-    w->world.Init = Init;
-    w->world.Step = Step;
-    w->world.Tick = Tick;
-    w->world.Draw = Draw;
-    w->world.Exit = Exit;
-
-    w->world.state = &w->state;
-
-    return (World *)w;
 }
+
+State settingsState = {0};
+World settingsWorld = {
+    .Init = Init,
+    .Open = Open,
+    .Step = Step,
+    .Tick = Tick,
+    .Draw = Draw,
+    .Exit = Exit,
+    .Kill = Kill,
+    .staticFlag = 1,
+    .state = &settingsState,
+};
+
+World *GetSettingsWorld()
+{
+    return &settingsWorld;
+}
+
+// typedef struct
+// {
+//     World world;
+//     State state;
+// } Container;
+// World *CreateSettingsWorld()
+// {
+//     Container *w = malloc(sizeof(Container));
+
+//     w->world.Init = Init;
+//     w->world.Open = Open;
+//     w->world.Step = Step;
+//     w->world.Tick = Tick;
+//     w->world.Draw = Draw;
+//     w->world.Exit = Exit;
+
+//     w->world.state = &w->state;
+
+//     Init(&w->world);
+
+//     return (World *)w;
+// }

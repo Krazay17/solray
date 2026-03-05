@@ -11,18 +11,14 @@
 #endif
 
 // Global definitions
-World *currentWorld = NULL;
-static World *pendingWorld = NULL;
-Camera3D globalCamera = {0};
+float TimeStep = 1.0f / 60.0f;
 bool AppShouldClose = false;
-
 SolConfig LocalConfig = {0};
 
-// Factory forward declarations
-World *CreateMenuWorld();
-
+static World *persistentWorld = NULL;
+static World *currentWorld = NULL;
+static World *pendingWorld = NULL;
 static float Accumulator = 0.0f;
-float TimeStep = 1.0f / 60.0f;
 
 void SwitchWorld(World *world)
 {
@@ -42,20 +38,30 @@ static void PerformSwitchWorld()
     {
         currentWorld->Exit(currentWorld);
         if (!currentWorld->staticFlag)
+        {
+            currentWorld->Kill(currentWorld);
             free(currentWorld);
+        }
         currentWorld = NULL;
     }
     currentWorld = pendingWorld;
     pendingWorld = NULL;
-    if (currentWorld && currentWorld->Init)
+
+    if (currentWorld && !currentWorld->initialized)
+    {
         currentWorld->Init(currentWorld);
+        currentWorld->initialized = 1;
+    }
+    if (currentWorld && currentWorld->Open)
+        currentWorld->Open(currentWorld);
 }
 
 static void Cleanup()
 {
     if (currentWorld)
     {
-        currentWorld->Exit(currentWorld);
+        if (currentWorld->Kill)
+            currentWorld->Kill(currentWorld);
         if (!currentWorld->staticFlag)
             free(currentWorld);
         currentWorld = NULL;
@@ -71,6 +77,7 @@ void main_loop(void)
 {
     PerformSwitchWorld();
     World *w = currentWorld;
+    World *p = persistentWorld;
     if (!w)
     {
         BeginDrawing();
@@ -107,8 +114,8 @@ void main_loop(void)
 
 void run()
 {
-
-    SetConfigFlags(FLAG_MSAA_4X_HINT);
+    SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_WINDOW_HIGHDPI | FLAG_WINDOW_ALWAYS_RUN);
+    SetWindowState(FLAG_WINDOW_RESIZABLE);
     InitWindow(1280, 720, "SolRay");
     SetExitKey(0);
     InitAudioDevice();
@@ -120,21 +127,20 @@ void run()
     if (NetInit())
         NetConnect("answer-cuba.gl.at.ply.gg", 35101);
 
-    globalCamera.position = (Vector3){10, 10, 10};
-    globalCamera.up = (Vector3){0, 1, 0};
-    globalCamera.fovy = 45;
-    globalCamera.projection = CAMERA_PERSPECTIVE;
+    persistentWorld = GetSettingsWorld();
+    SwitchWorld(GetMenuWorld());
 
-    SwitchWorld(CreateMenuWorld());
 #ifdef __EMSCRIPTEN__
     emscripten_set_main_loop(main_loop, 0, 1);
 #else
+
     while (!AppShouldClose && !WindowShouldClose())
     {
         main_loop();
     }
-#endif
     Cleanup();
+    
+#endif
 }
 
 void Sol_LocalInit(SolConfig *config)

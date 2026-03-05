@@ -17,4 +17,4 @@ typedef struct
     MoveState lastState;
 } Move;
 
-void Update_Move(Input *inputs, Body *bodies, Entities *entities, float dt);
+void Move_Update(Input *inputs, Body *bodies, Entities *entities, float dt);

@@ -2,7 +2,7 @@
 #include "raymath.h"
 #include "core/GameWorld.h"
 
-void Update_Move(Input *inputs, Body *bodies, Entities *entities, float dt)
+void Move_Update(Input *inputs, Body *bodies, Entities *entities, float dt)
 {
     for (int i = 0; i < entities->count; i++)
     {

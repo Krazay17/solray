@@ -4,10 +4,6 @@
 #include "ui/Button.h"
 #include "core/Loader.h"
 
-// Forward declare the menu factory so we can return to it
-extern World *GetGameWorld();
-extern World *CreateSettingsWorld();
-
 typedef enum
 {
     BTN_START,
@@ -25,42 +21,46 @@ typedef struct
 
 static void Init(World *self)
 {
-    State *d = (State *)self->state;
+    State *s = (State *)self->state;
 
     float startY = 150.0f;
     for (int i = 0; i < BTN_COUNT; i++)
     {
-        d->buttons[i] = (Button){{300, startY + (i * 60), 200, 50}, GRAY, false, false};
+        s->buttons[i] = (Button){{300, startY + (i * 60), 200, 50}, GRAY, false, false};
     }
 
-    d->hoverSound = GetRM()->audio.beep1;
-    d->buttons[BTN_START].text = "Start Game";
-    d->buttons[BTN_SETTINGS].text = "Settings";
-    d->buttons[BTN_QUIT].text = "Quit";
+    s->hoverSound = GetRM()->audio.beep1;
+    s->buttons[BTN_START].text = "Start Game";
+    s->buttons[BTN_SETTINGS].text = "Settings";
+    s->buttons[BTN_QUIT].text = "Quit";
 
+    Sound music = GetRM()->audio.menuMusic;
+    PlaySound(music);
+    SetSoundVolume(music, 0.4f);
+}
+
+static void Open(World *self)
+{
     if (IsCursorHidden())
         EnableCursor();
-    Sound music = GetRM()->audio.menuMusic;
-    SetSoundVolume(music, 0.4f);
-    PlaySound(music);
 }
 
 static void Step(World *self, float delta)
 {
-    State *d = (State *)self->state;
+    State *s = (State *)self->state;
 }
 
 static void Tick(World *self, float dt)
 {
-    State *d = (State *)self->state;
+    State *s = (State *)self->state;
 
     for (int i = 0; i < BTN_COUNT; i++)
     {
-        if (d->buttons[i].isHovered && !d->buttons[i].wasHovered)
+        if (s->buttons[i].isHovered && !s->buttons[i].wasHovered)
         {
-            PlaySound(d->hoverSound);
+            PlaySound(s->hoverSound);
         }
-        if (UpdateButton(&d->buttons[i]))
+        if (UpdateButton(&s->buttons[i], dt))
         {
             if (i == BTN_START)
             {
@@ -69,7 +69,7 @@ static void Tick(World *self, float dt)
             }
             if (i == BTN_SETTINGS)
             {
-                SwitchWorld(CreateSettingsWorld());
+                SwitchWorld(GetSettingsWorld());
                 return;
             }
             if (i == BTN_QUIT)
@@ -83,34 +83,64 @@ static void Tick(World *self, float dt)
 
 static void Draw(World *self)
 {
-    State *d = (State *)self->state;
+    State *s = (State *)self->state;
 
     for (int i = 0; i < BTN_COUNT; i++)
     {
-        DrawButton(&d->buttons[i]);
+        DrawButton(&s->buttons[i]);
     }
 }
 
 static void Exit(World *self)
 {
+    State *s = (State *)self->state;
+    for (int i = 0; i < BTN_COUNT; i++)
+    {
+        Button_Reset(&s->buttons[i]);
+    }
 }
 
-typedef struct
+static void Kill(World *self)
 {
-    World world;
-    State state;
-} Container;
-World *CreateMenuWorld()
-{
-    Container *w = malloc(sizeof(Container));
-
-    w->world.Init = Init;
-    w->world.Step = Step;
-    w->world.Tick = Tick;
-    w->world.Draw = Draw;
-    w->world.Exit = Exit;
-
-    w->world.state = &w->state;
-
-    return (World *)w;
 }
+
+static State menuState = {0};
+static World menuWorld = {
+    .Init = Init,
+    .Open = Open,
+    .Step = Step,
+    .Tick = Tick,
+    .Draw = Draw,
+    .Exit = Exit,
+    .Kill = Kill,
+    .staticFlag = 1,
+    .state = &menuState,
+};
+
+World *GetMenuWorld()
+{
+    return &menuWorld;
+}
+
+// typedef struct
+// {
+//     World world;
+//     State state;
+// } Container;
+// World *CreateMenuWorld()
+// {
+//     Container *w = malloc(sizeof(Container));
+
+//     w->world.Init = Init;
+//     w->world.Open = Open;
+//     w->world.Step = Step;
+//     w->world.Tick = Tick;
+//     w->world.Draw = Draw;
+//     w->world.Exit = Exit;
+
+//     w->world.state = &w->state;
+
+//     Init(&w->world);
+
+//     return (World *)w;
+// }

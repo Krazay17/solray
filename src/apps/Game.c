@@ -1,14 +1,19 @@
 #include "core/App.h"
+#include <stdlib.h>
 #include <stdio.h>
+#include "raylib.h"
 #include "core/World.h"
 #include "core/GameWorld.h"
-#include <stdlib.h>
 #include "core/Loader.h"
 #include "net/Net.h"
 #include "ui/Debug.h"
 
-// Forward declare the menu factory so we can return to it
-extern World *CreateMenuWorld();
+Camera3D globalCamera = {
+    .projection = CAMERA_PERSPECTIVE,
+    .fovy = 45,
+    .up = (Vector3){0, 1, 0},
+    .position = (Vector3){10, 10, 10},
+};
 
 static int AddEntity(GameState *s)
 {
@@ -19,7 +24,7 @@ static int AddEntity(GameState *s)
             s->entities.active[i] = true;
             s->bodies[i] = (Body){0};
             s->inputs[i] = (Input){0};
-            // Keep track of the highest index to optimize loops if you want
+            // Keep track of the highest index to optimize loops
             if (i >= s->entities.count)
                 s->entities.count = i + 1;
             return i;
@@ -43,11 +48,6 @@ int CreatePlayer(GameState *s)
         .speedA = 1.0f,
         .mass = 100.0f,
     };
-    s->camControl = (CamControl){
-        .yaw = 0,
-        .pitch = 0,
-        .sens = 0.2f,
-    };
 
     return id;
 }
@@ -64,28 +64,35 @@ static void Init(World *self)
     for (int i = 0; i < MAX_CLIENTS; i++)
         s->netToLocal[i] = -1;
 
-    DisableCursor();
-    PlaySound(GetRM()->audio.woong1);
+    s->camControl = (CamControl){
+        .yaw = 0,
+        .pitch = 0,
+        .sens = 0.2f,
+    };
 
     CreatePlayer(s);
+}
+
+static void Open(World *self)
+{
+    DisableCursor();
+    PlaySound(GetRM()->audio.woong1);
 }
 
 static void Step(World *self, float dt)
 {
     GameState *s = (GameState *)self->state;
     Update_NetSync(s, dt);
-
-    debugs[DEBUG_FRAMERATE].value = GetFPS();
-    debugs[DEBUG_LOCALID].value = s->localId;
-    debugs[DEBUG_ENTITIES].value = s->entities.count;
-    debugs[DEBUG_NETID].value = s->netLocalId;
+    Debug_Clear();
+    Debug_Log("Framerate", GetFPS());
+    Debug_Log("Entities", s->entities.count);
 }
 
 static void Tick(World *self, float dt)
 {
     GameState *s = (GameState *)self->state;
     if (IsKeyPressed(KEY_BACKSPACE))
-        SwitchWorld(CreateMenuWorld());
+        SwitchWorld(GetMenuWorld());
     if (IsKeyPressed(KEY_ESCAPE) && IsCursorHidden())
         EnableCursor();
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
@@ -96,10 +103,10 @@ static void Tick(World *self, float dt)
             DisableCursor();
     }
     if (IsCursorHidden())
-        Update_Cam(&globalCamera, &s->bodies[s->localId], &s->camControl);
+        Cam_Update(&globalCamera, &s->bodies[s->localId], &s->camControl);
 
-    Update_Input(s->inputs, &s->entities, s->localId, globalCamera);
-    Update_Move(s->inputs, s->bodies, &s->entities, dt);
+    Input_Update(s->inputs, &s->entities, s->localId, &globalCamera);
+    Move_Update(s->inputs, s->bodies, &s->entities, dt);
     Update_Physx(s->bodies, &s->entities, dt);
 }
 
@@ -122,24 +129,29 @@ static void Draw(World *self)
     DrawGrid(50, 1.0f);
     EndMode3D();
 
-    Draw_Debug(debugs, DEBUG_COUNT);
+    Debug_Draw();
 }
 
 static void Exit(World *self)
 {
     GameState *s = (GameState *)self->state;
+}
+
+static void Kill(World *self)
+{
+    GameState *s = (GameState *)self->state;
     UnloadModel(s->knotModel);
 }
 
-static GameState gameState = {
-    .entities = 0,
-};
+static GameState gameState = {0};
 static World GameWorld = {
     .Init = Init,
+    .Open = Open,
     .Step = Step,
     .Tick = Tick,
     .Draw = Draw,
     .Exit = Exit,
+    .Kill = Kill,
     .staticFlag = 1,
     .state = &gameState,
 };

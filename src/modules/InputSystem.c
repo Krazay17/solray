@@ -2,7 +2,7 @@
 #include "raymath.h"
 #include "core/GameWorld.h"
 
-void Update_Input(Input *inputs, Entities *entities, int localId, Camera3D cam)
+void Input_Update(Input *inputs, Entities *entities, int localId, Camera3D *cam)
 {
     for (int i = 0; i < entities->count; i++)
     {
@@ -14,9 +14,9 @@ void Update_Input(Input *inputs, Entities *entities, int localId, Camera3D cam)
     }
 }
 
-void Local_Input(Input *input, int localId, Camera3D cam)
+void Local_Input(Input *input, int localId, Camera3D *cam)
 {
-    Vector3 fwd = Vector3Subtract(cam.target, cam.position);
+    Vector3 fwd = Vector3Subtract(cam->target, cam->position);
     fwd.y = 0;
     fwd = Vector3Normalize(fwd);
     Vector3 right = Vector3CrossProduct(fwd, (Vector3){0, 1, 0});

@@ -19,6 +19,6 @@ typedef struct
     uint8_t actionMask;
 } Input;
 
-void Update_Input(Input *inputs, Entities *entities, int localId, Camera3D cam);
-void Local_Input(Input *input, int localId, Camera3D cam);
+void Input_Update(Input *inputs, Entities *entities, int localId, Camera3D *cam);
+void Local_Input(Input *input, int localId, Camera3D *cam);
 void Remote_Input(Input *input, int id, float yaw);
