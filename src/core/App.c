@@ -158,6 +158,15 @@ void SyncWindowSize()
 {
     engineState.width = GetScreenWidth();
     engineState.height = GetScreenHeight();
+
+    for (int i = 0; i < WORLD_COUNT; i++)
+    {
+        World *w = engineState.worlds[i];
+        if (w && w->ReSize)
+        {
+            w->ReSize(w, engineState.width, engineState.height);
+        }
+    }
 }
 
 void OpenWorld(WorldId id)

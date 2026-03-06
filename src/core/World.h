@@ -10,6 +10,7 @@ typedef void (*WorldTick)(World *self, float dt);
 typedef void (*WorldDraw)(World *self);
 typedef void (*WorldExit)(World *self);
 typedef void (*WorldKill)(World *self);
+typedef void (*WorldSize)(World *self, int width, int height);
 
 struct World
 {
@@ -21,6 +22,7 @@ struct World
     WorldDraw Draw;
     WorldExit Exit;
     WorldKill Kill;
+    WorldSize ReSize;
     bool active;
     bool staticFlag;
     bool initialized;

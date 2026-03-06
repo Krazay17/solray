@@ -19,15 +19,29 @@ typedef struct
     int currentChannel;
 } State;
 
+static void ReSize(World *self, int width, int height)
+{
+    State *s = (State *)self->state;
+    float startY = height / 3.0f;
+    float centerX = width / 2.0f;
+
+    for (int i = 0; i < BTN_COUNT; i++)
+    {
+        // Re-center the button based on new width
+        s->buttons[i].rect.x = centerX - (s->buttons[i].rect.width / 2.0f);
+        s->buttons[i].rect.y = startY + (i * 60.0f);
+    }
+}
+
 static void Init(World *self)
 {
     State *s = (State *)self->state;
 
-    float startY = 150.0f;
     for (int i = 0; i < BTN_COUNT; i++)
     {
-        s->buttons[i] = (Button){{300, startY + (i * 60), 200, 50}, GRAY, false, false};
+        s->buttons[i] = (Button){{0, 0, 250, 50}, GRAY, false, false};
     }
+    ReSize(self, engineState.width, engineState.height);
 
     s->hoverSound = GetRM()->audio.beep1;
     s->buttons[BTN_START].text = "Start Game";
@@ -124,6 +138,7 @@ static World menuWorld = {
     .Draw = Draw,
     .Exit = Exit,
     .Kill = Kill,
+    .ReSize = ReSize,
     .staticFlag = 1,
     .state = &menuState,
     .active = 1,
