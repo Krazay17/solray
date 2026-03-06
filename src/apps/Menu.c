@@ -62,7 +62,6 @@ static void Open(World *self)
 static bool Poll(World *self, float dt)
 {
     State *s = (State *)self->state;
-    bool consumed = false;
     if (IsKeyPressed(KEY_ESCAPE))
     {
         OpenWorld(WORLD_GAME);
@@ -77,22 +76,24 @@ static bool Poll(World *self, float dt)
         }
         if (UpdateButton(&s->buttons[i], dt))
         {
-            consumed = true;
             if (i == BTN_START)
             {
                 OpenWorld(WORLD_GAME);
+                return true;
             }
-            else if (i == BTN_SETTINGS)
+            if (i == BTN_SETTINGS)
             {
                 ChangeMenu(GetSettingsWorld());
+                return true;
             }
-            else if (i == BTN_QUIT)
+            if (i == BTN_QUIT)
             {
                 AppShouldClose = true;
+                return true;
             }
         }
     }
-    return consumed;
+    return false;
 }
 
 static void Step(World *self, float delta)

@@ -127,6 +127,8 @@ void NetService(void)
             memset(internal_state.players, 0, sizeof(PlayerPacket) * MAX_CLIENTS);
             server_peer = NULL;
             break;
+        case ENET_EVENT_TYPE_NONE:
+            break;
         }
     }
 }

@@ -6,6 +6,7 @@
 #include "core/GlobalState.h"
 #include "core/LocalConfig.h"
 #include "raymath.h"
+#include "modules/EventSystem.h"
 
 typedef enum
 {
@@ -39,6 +40,22 @@ typedef struct
     bool fullscreen;
 } State;
 
+State settingsState;
+
+static void ReSize()
+{
+    float startY = 150.0f;
+    for(int i = 0; i<BTN_COUNT;i++)
+    {
+        settingsState.buttons[i].rect.x = engineState.width / 4.0f;
+        settingsState.buttons[i].rect.y = startY + i * 60;
+    }
+    for(int i = 0;i<SLDR_COUNT;i++)
+    {
+        settingsState.sliders[i].bg.x = engineState.width / 1.5f;
+        settingsState.sliders[i].bg.y = startY + i * 60;
+    }
+}
 static void Init(World *self)
 {
     State *s = (State *)self->state;
@@ -66,6 +83,9 @@ static void Init(World *self)
             .handleWidth = 15.0f,
         };
     }
+    ReSize();
+    OnEvent(EVENT_WINDOW_RESIZE, ReSize);
+
     s->buttons[BTN_AONTOP].text = "OnTop";
     s->buttons[BTN_BORDERLESS].text = "Borderless";
     s->buttons[BTN_FULLSCREEN].text = "Fullscreen";

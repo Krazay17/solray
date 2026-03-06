@@ -6,6 +6,7 @@
 #include "Loader.h"
 #include "net/Net.h"
 #include "GlobalState.h"
+#include "modules/EventSystem.h"
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #endif
@@ -158,6 +159,7 @@ void SyncWindowSize()
 {
     engineState.width = GetScreenWidth();
     engineState.height = GetScreenHeight();
+    EmitEvent(EVENT_WINDOW_RESIZE, NULL);
 
     for (int i = 0; i < WORLD_COUNT; i++)
     {
@@ -174,7 +176,7 @@ void OpenWorld(WorldId id)
     for (int i = 0; i < id; i++)
     {
         World *ew = engineState.worlds[i];
-        if (ew && ew->Exit)
+        if (ew && ew->active && ew->Exit)
             ew->Exit(ew);
     }
     World *w = engineState.worlds[id];
