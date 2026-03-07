@@ -51,7 +51,9 @@ void main_loop(void)
     int height = GetScreenHeight();
     if (width != engineState.width || height != engineState.height)
     {
-        SyncWindowSize(width, height);
+        engineState.width = width;
+        engineState.height = height;
+        EmitEvent(EVENT_WINDOW_RESIZE, &(WindowData){width, height});
     }
 
     for (int i = WORLD_COUNT - 1; i >= 0; i--)
@@ -155,13 +157,6 @@ static void InitWorlds()
         game->Init(game);
         game->initialized = true;
     }
-}
-
-void SyncWindowSize(int width, int height)
-{
-    engineState.width = width;
-    engineState.height = height;
-    EmitEvent(EVENT_WINDOW_RESIZE, &(WindowData){width, height});
 }
 
 void OpenWorld(WorldId id)
