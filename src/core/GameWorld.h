@@ -4,9 +4,9 @@
 #include "modules/CamSystem.h"
 #include "modules/NetSyncSystem.h"
 #include "net/Net.h"
+#include "models/rlights.h"
 
 #define MAX_ENTITIES 100
-
 extern Camera3D globalCamera;
 
 typedef struct Entities
@@ -20,8 +20,11 @@ typedef struct GameState
     Sound sound;
     Mesh knotMesh;
     Model knotModel;
+    Model *wizardModel;
     Model *playerModel;
     CamControl camControl;
+
+    Light sunlight;
 
     int localId;
     int netLocalId;

@@ -18,7 +18,10 @@ bool UpdateButton(Button *btn, float dt)
 
     Vector2 mouse = GetMousePosition();
     btn->wasHovered = btn->isHovered;
-    btn->isHovered = CheckCollisionPointRec(mouse, btn->rect);
+    // btn->isHovered = CheckCollisionPointRec(mouse, btn->rect);
+    btn->isHovered = Sol_Check_2d_Collision(
+        (Vec2){mouse.x, mouse.y},
+        btn->SolRect);
 
     if (btn->isHovered)
     {
@@ -84,7 +87,9 @@ bool UpdateSlider(Slider *slider)
     Vector2 mouse = GetMousePosition();
     slider->wasHovered = slider->isHovered;
     slider->wasPressed = slider->isPressed;
-    slider->isHovered = CheckCollisionPointRec(mouse, slider->bg);
+    slider->isHovered = Sol_Check_2d_Collision(
+        (Vec2){mouse.x, mouse.y},
+        slider->SolRect);
 
     if (slider->isHovered && IsMouseButtonDown(MOUSE_LEFT_BUTTON))
     {
@@ -94,8 +99,8 @@ bool UpdateSlider(Slider *slider)
         slider->isPressed = 0;
     if (slider->isPressed)
     {
-        float localX = mouse.x - slider->bg.x;
-        float newValue = localX / slider->bg.width;
+        float localX = mouse.x - slider->rect.x;
+        float newValue = localX / slider->rect.width;
         if (newValue < 0.0f)
             newValue = 0.0f;
         if (newValue > 1.0f)
@@ -113,29 +118,29 @@ void DrawSlider(Slider *slider)
 {
     Color drawColor = slider->isHovered ? SKYBLUE : slider->bgC;
     Color handleColor = slider->isPressed ? DARKGRAY : slider->handleC;
-    DrawRectangleRec(slider->bg, drawColor);
+    DrawRectangleRec(slider->rect, drawColor);
     if (slider->isHovered)
-        DrawRectangleLinesEx(slider->bg, 2.0f, BLUE);
+        DrawRectangleLinesEx(slider->rect, 2.0f, BLUE);
     DrawRectangleRec((Rectangle){
-                         slider->bg.x,
-                         slider->bg.y,
-                         slider->bg.width * slider->value,
-                         slider->bg.height,
+                         slider->rect.x,
+                         slider->rect.y,
+                         slider->rect.width * slider->value,
+                         slider->rect.height,
                      },
                      slider->fillC);
 
     DrawRectangleRec((Rectangle){
-                         .x = slider->bg.x + (slider->bg.width * slider->value) - slider->handleWidth / 2.0f,
-                         slider->bg.y,
+                         .x = slider->rect.x + (slider->rect.width * slider->value) - slider->handleWidth / 2.0f,
+                         slider->rect.y,
                          slider->handleWidth,
-                         slider->bg.height,
+                         slider->rect.height,
                      },
                      handleColor);
     // Center text logic
     int fontSize = 20;
     int textWidth = MeasureText(slider->text, fontSize);
     DrawText(slider->text,
-             slider->bg.x + (slider->bg.width / 2) - (textWidth / 2),
-             slider->bg.y + (slider->bg.height / 2) - (fontSize / 2),
+             slider->rect.x + (slider->rect.width / 2) - (textWidth / 2),
+             slider->rect.y + (slider->rect.height / 2) - (fontSize / 2),
              fontSize, WHITE);
 }

@@ -13,6 +13,7 @@ add_executable(solray ${SOURCES} ${RESOURCE_FILE})
 target_include_directories(solray PRIVATE
     "src"
     "vendored/enet/include"
+    "vendored/RAYLIB/examples"
 )
 if(WIN32)
     target_link_libraries(solray PRIVATE
@@ -57,3 +58,9 @@ target_include_directories(solray_server PRIVATE
 if(WIN32)
     target_link_libraries(solray_server PRIVATE ws2_32 winmm)
 endif()
+
+# Copy shaders folder to the output directory
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    "${CMAKE_CURRENT_SOURCE_DIR}/assets"
+    "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets")

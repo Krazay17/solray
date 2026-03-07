@@ -54,8 +54,8 @@ static void ReSize(void *target, void *data)
     }
     for (int i = 0; i < SLDR_COUNT; i++)
     {
-        settingsState.sliders[i].bg.x = engineState.width / 1.5f;
-        settingsState.sliders[i].bg.y = startY + i * 60;
+        settingsState.sliders[i].rect.x = engineState.width / 1.5f;
+        settingsState.sliders[i].rect.y = startY + i * 60;
     }
 }
 static void Init(World *self)
@@ -76,7 +76,7 @@ static void Init(World *self)
     for (int i = 0; i < SLDR_COUNT; i++)
     {
         s->sliders[i] = (Slider){
-            .bg = {100.0f, startY + i * 60, 150.0f, 30.0f},
+            .rect = {100.0f, startY + i * 60, 150.0f, 30.0f},
             .bgC = GRAY,
             .fillC = GREEN,
             .isPressed = false,

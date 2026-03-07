@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "raylib.h"
+#include "rlgl.h"
+#include "models/rlights.h"
 #include "core/World.h"
 #include "core/GameWorld.h"
 #include "core/Loader.h"
@@ -56,11 +58,13 @@ static void Init(World *self)
 {
     GameState *s = (GameState *)self->state;
     s->entities.count = 0;
-    s->playerModel = &GetRM()->draw.cylinderModel;
+    s->wizardModel = &GetRM()->models.wizardModel;
+    s->playerModel = &GetRM()->models.cylinderModel;
     s->knotMesh = GenMeshKnot(1, 1, 12, 24);
     s->knotModel = LoadModelFromMesh(s->knotMesh);
     s->localId = 0;
     s->netLocalId = -1;
+    s->sunlight = CreateLight(LIGHT_DIRECTIONAL, (Vector3){0.5f, 1.0f, 0.5f}, (Vector3){0, 0, 0}, WHITE, *(Shader *)&GetRM()->shaders.light);
     for (int i = 0; i < MAX_CLIENTS; i++)
         s->netToLocal[i] = -1;
 
@@ -82,7 +86,7 @@ static void Open(World *self)
 
 static bool Poll(World *self, float dt)
 {
-    if(IsKeyPressed(KEY_ESCAPE))
+    if (IsKeyPressed(KEY_ESCAPE))
     {
         ChangeMenu(GetMenuWorld());
         OpenWorld(WORLD_MENU);
@@ -117,6 +121,16 @@ static void Tick(World *self, float dt)
     Cam_Update(&globalCamera, &s->bodies[s->localId], &s->camControl, IsCursorHidden());
     Move_Update(s->inputs, s->bodies, &s->entities, dt);
     Update_Physx(s->bodies, &s->entities, dt);
+
+    Shader lightShader = GetRM()->shaders.light;
+
+    // Tell the shader where the camera is
+    float cameraPos[3] = {globalCamera.position.x, globalCamera.position.y, globalCamera.position.z};
+    int viewPosLoc = GetShaderLocation(lightShader, "viewPos");
+    SetShaderValue(lightShader, viewPosLoc, cameraPos, SHADER_UNIFORM_VEC3);
+
+    // Update the actual light values (rlights.h handles the lightPos/Color uniforms)
+    UpdateLightValues(lightShader, s->sunlight);
 }
 
 static void Draw(World *self)
@@ -132,8 +146,16 @@ static void Draw(World *self)
         DrawModel(*s->playerModel, body.position, 1.0f, RED);
         DrawModelWires(*s->playerModel, body.position, 1, BLACK);
     }
-    DrawModel(s->knotModel, (Vector3){0, 5, 0}, 1.0f, BLUE);
-    DrawModelWires(s->knotModel, (Vector3){0, 5, 0}, 1.0f, BLACK);
+    // DrawModel(s->knotModel, (Vector3){0, 5, 0}, 1.0f, BLUE);
+    // DrawModelWires(s->knotModel, (Vector3){0, 5, 0}, 1.0f, BLACK);
+
+    rlDisableBackfaceCulling();
+    for (int i = 0; i < 100; i++)
+    {
+        DrawModel(*s->wizardModel, (Vector3){i + i, 2, 0}, 1.0f, WHITE);
+        // DrawModelWires(*s->wizardModel, (Vector3){i + i, 2, 0}, 1.0f, BLACK);
+    }
+    rlEnableBackfaceCulling();
 
     DrawGrid(50, 1.0f);
     EndMode3D();

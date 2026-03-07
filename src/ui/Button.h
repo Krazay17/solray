@@ -1,9 +1,14 @@
 #pragma once
 #include <raylib.h>
+#include "utils/SolMath.h"
 
 typedef struct
 {
-    Rectangle rect;
+    union
+    {
+        Rectangle rect;
+        Rect SolRect;
+    };
     Color baseColor;
     const char *text;
     float clickAnim;
@@ -18,7 +23,11 @@ typedef struct
 
 typedef struct
 {
-    Rectangle bg;
+    union
+    {
+        Rectangle rect;
+        Rect SolRect;
+    };
     float handleWidth;
     Color bgC;
     Color fillC;
