@@ -47,9 +47,11 @@ void main_loop(void)
             ShowCursor();
     }
 
-    if (GetScreenWidth() != engineState.width || GetScreenHeight() != engineState.height)
+    int width = GetScreenWidth();
+    int height = GetScreenHeight();
+    if (width != engineState.width || height != engineState.height)
     {
-        SyncWindowSize();
+        SyncWindowSize(width, height);
     }
 
     for (int i = WORLD_COUNT - 1; i >= 0; i--)
@@ -155,20 +157,11 @@ static void InitWorlds()
     }
 }
 
-void SyncWindowSize()
+void SyncWindowSize(int width, int height)
 {
-    engineState.width = GetScreenWidth();
-    engineState.height = GetScreenHeight();
-    EmitEvent(EVENT_WINDOW_RESIZE, NULL);
-
-    for (int i = 0; i < WORLD_COUNT; i++)
-    {
-        World *w = engineState.worlds[i];
-        if (w && w->ReSize)
-        {
-            w->ReSize(w, engineState.width, engineState.height);
-        }
-    }
+    engineState.width = width;
+    engineState.height = height;
+    EmitEvent(EVENT_WINDOW_RESIZE, &(WindowData){width, height});
 }
 
 void OpenWorld(WorldId id)

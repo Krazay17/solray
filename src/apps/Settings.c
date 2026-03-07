@@ -42,15 +42,17 @@ typedef struct
 
 State settingsState;
 
-static void ReSize()
+static void ReSize(void *target, void *data)
 {
+    World *self = (World*)target;
+    WindowData *wData = (WindowData*)data;
     float startY = 150.0f;
-    for(int i = 0; i<BTN_COUNT;i++)
+    for (int i = 0; i < BTN_COUNT; i++)
     {
         settingsState.buttons[i].rect.x = engineState.width / 4.0f;
         settingsState.buttons[i].rect.y = startY + i * 60;
     }
-    for(int i = 0;i<SLDR_COUNT;i++)
+    for (int i = 0; i < SLDR_COUNT; i++)
     {
         settingsState.sliders[i].bg.x = engineState.width / 1.5f;
         settingsState.sliders[i].bg.y = startY + i * 60;
@@ -83,8 +85,12 @@ static void Init(World *self)
             .handleWidth = 15.0f,
         };
     }
-    ReSize();
-    OnEvent(EVENT_WINDOW_RESIZE, ReSize);
+    WindowData windowData = {
+        .width = engineState.width,
+        .height = engineState.height,
+    };
+    ReSize(self, &windowData);
+    OnEvent(EVENT_WINDOW_RESIZE, self, ReSize);
 
     s->buttons[BTN_AONTOP].text = "OnTop";
     s->buttons[BTN_BORDERLESS].text = "Borderless";

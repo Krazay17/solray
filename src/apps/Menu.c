@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include "ui/Button.h"
 #include "core/Loader.h"
+#include "modules/EventSystem.h"
 
 typedef enum
 {
@@ -19,17 +20,17 @@ typedef struct
     int currentChannel;
 } State;
 
-static void ReSize(World *self, int width, int height)
+static void ReSize(void *target, void *data)
 {
-    State *s = (State *)self->state;
-    float startY = height / 3.0f;
-    float centerX = width / 2.0f;
-
+    World *self = (World *)target;
+    State *state = (State *)self->state;
+    WindowData *wData = (WindowData *)data;
+    float startY = wData->height / 3.0f;
+    float centerX = wData->width / 2.0f;
     for (int i = 0; i < BTN_COUNT; i++)
     {
-        // Re-center the button based on new width
-        s->buttons[i].rect.x = centerX - (s->buttons[i].rect.width / 2.0f);
-        s->buttons[i].rect.y = startY + (i * 60.0f);
+        state->buttons[i].rect.x = centerX - (state->buttons[i].rect.width / 2.0f);
+        state->buttons[i].rect.y = startY + i * 60;
     }
 }
 
@@ -41,7 +42,8 @@ static void Init(World *self)
     {
         s->buttons[i] = (Button){{0, 0, 250, 50}, GRAY, false, false};
     }
-    ReSize(self, engineState.width, engineState.height);
+    ReSize(self, &(WindowData){engineState.width, engineState.height});
+    OnEvent(EVENT_WINDOW_RESIZE, self, ReSize);
 
     s->hoverSound = GetRM()->audio.beep1;
     s->buttons[BTN_START].text = "Start Game";
@@ -139,7 +141,6 @@ static World menuWorld = {
     .Draw = Draw,
     .Exit = Exit,
     .Kill = Kill,
-    .ReSize = ReSize,
     .staticFlag = 1,
     .state = &menuState,
     .active = 1,
