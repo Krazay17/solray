@@ -64,7 +64,6 @@ static void Init(World *self)
     s->knotModel = LoadModelFromMesh(s->knotMesh);
     s->localId = 0;
     s->netLocalId = -1;
-    s->sunlight = CreateLight(LIGHT_DIRECTIONAL, (Vector3){0.5f, 1.0f, 0.5f}, (Vector3){0, 0, 0}, WHITE, *(Shader *)&GetRM()->shaders.light);
     for (int i = 0; i < MAX_CLIENTS; i++)
         s->netToLocal[i] = -1;
 
@@ -122,15 +121,24 @@ static void Tick(World *self, float dt)
     Move_Update(s->inputs, s->bodies, &s->entities, dt);
     Update_Physx(s->bodies, &s->entities, dt);
 
-    Shader lightShader = GetRM()->shaders.light;
+    if (GetRM()->models.wizardAnimCount > 0)
+    {
+        static float animCurrentFrame;
+        // 0 is usually the first animation (often Idle)
+        ModelAnimation anim = GetRM()->models.wizardAnims[0];
 
-    // Tell the shader where the camera is
+        // Increment frame based on time
+        animCurrentFrame += 30.0f * dt; // Assuming 30 FPS animation
+        if (animCurrentFrame >= anim.keyframeCount)
+            animCurrentFrame = 0;
+
+        // Apply the animation state to the model's mesh/bones
+        UpdateModelAnimation(*s->wizardModel, anim, (int)animCurrentFrame);
+    }
+
     float cameraPos[3] = {globalCamera.position.x, globalCamera.position.y, globalCamera.position.z};
-    int viewPosLoc = GetShaderLocation(lightShader, "viewPos");
-    SetShaderValue(lightShader, viewPosLoc, cameraPos, SHADER_UNIFORM_VEC3);
-
-    // Update the actual light values (rlights.h handles the lightPos/Color uniforms)
-    UpdateLightValues(lightShader, s->sunlight);
+    int viewPosLoc = GetShaderLocation(GetRM()->shaders.light, "viewPos");
+    SetShaderValue(GetRM()->shaders.light, viewPosLoc, cameraPos, SHADER_UNIFORM_VEC3);
 }
 
 static void Draw(World *self)

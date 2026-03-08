@@ -31,25 +31,29 @@ void sol_init_loader(void)
     res->models.defMat = LoadMaterialDefault();
     res->models.cylinderMesh = GenMeshCylinder(0.5f, 1.0f, 8);
     res->models.cylinderModel = LoadModelFromMesh(res->models.cylinderMesh);
-    res->models.wizardModel = LoadModelFromRes("ID_SND_WIZARD", ".glb");
-
+    res->models.wizardModel = LoadModelFromRes(
+        "ID_SND_WIZARD",
+        ".glb",
+        &res->models.wizardAnims,
+        &res->models.wizardAnimCount);
     for (int i = 0; i < res->models.wizardModel.materialCount; i++)
     {
         res->models.wizardModel.materials[i].shader = res->shaders.light;
     }
 }
 
-Shader LoadShaderFromRes(const char* vsId, const char* fsId) {
+Shader LoadShaderFromRes(const char *vsId, const char *fsId)
+{
     RawResource vsRes = LoadResourceData(vsId);
     RawResource fsRes = LoadResourceData(fsId);
-    
+
     // We must ensure the strings are null-terminated for the GLSL compiler
-    char* vsSource = (char*)malloc(vsRes.size + 1);
-    char* fsSource = (char*)malloc(fsRes.size + 1);
-    
+    char *vsSource = (char *)malloc(vsRes.size + 1);
+    char *fsSource = (char *)malloc(fsRes.size + 1);
+
     memcpy(vsSource, vsRes.data, vsRes.size);
     memcpy(fsSource, fsRes.data, fsRes.size);
-    
+
     vsSource[vsRes.size] = '\0';
     fsSource[fsRes.size] = '\0';
 
@@ -58,11 +62,11 @@ Shader LoadShaderFromRes(const char* vsId, const char* fsId) {
 
     free(vsSource);
     free(fsSource);
-    
+
     return shdr;
 }
 
-Model LoadModelFromRes(const char *id, const char *ext)
+Model LoadModelFromRes(const char *id, const char *ext, ModelAnimation **anims, int *animCount)
 {
     RawResource res = LoadResourceData(id);
     if (res.data && res.size > 0)
@@ -81,6 +85,7 @@ Model LoadModelFromRes(const char *id, const char *ext)
 
             // 3. Tell raylib to load from the file we just created
             Model model = LoadModel(tempPath);
+            *anims = LoadModelAnimations(tempPath, animCount);
 
             // 4. Clean up the physical file immediately
             // The model data is now safely in GPU/System RAM
@@ -117,7 +122,13 @@ void CloseLoader(void)
         UnloadSound(res->audio.woong1);
         UnloadSound(res->audio.menuMusic);
 
+        if (res->models.wizardAnims != NULL)
+        {
+            UnloadModelAnimations(res->models.wizardAnims, res->models.wizardAnimCount);
+        }
+
         UnloadModel(res->models.cylinderModel);
+        UnloadModel(res->models.wizardModel);
 
         free(res);
         res = NULL;

@@ -8,29 +8,36 @@ out vec4 finalColor;
 
 uniform sampler2D texture0;
 uniform vec4 colDiffuse;
-uniform vec3 lightPos;   // This is actually the DIRECTION for directional lights
-uniform vec4 lightColor;
-uniform vec3 viewPos;
+uniform vec3 viewPos;// We need this for both Rim and Fog
 
 void main()
 {
-    vec4 texelColor = texture(texture0, fragTexCoord);
-    vec3 normal = normalize(fragNormal);
+    vec4 texelColor=texture(texture0,fragTexCoord);
+    vec3 normal=normalize(fragNormal);
+    vec3 viewDir=normalize(viewPos-fragPosition);
     
-    // FIX: For Directional Light, we use the lightPos directly as the direction
-    // We normalize it to be safe.
-    vec3 lightDir = normalize(lightPos);
+    // --- 1. Top-Down Lighting ---
+    float diffuse=max(dot(normal,vec3(0.,1.,0.)),0.);
     
-    // Standard Diffuse (Lambertian)
-    float diff = max(dot(normal, lightDir), 0.0);
-    vec3 diffuse = diff * lightColor.rgb;
+    // --- 2. Rim Lighting ---
+    // High intensity when the normal is perpendicular to the view direction
+    float rimThreshold=.5;// Adjust this to make rim wider/thinner
+    float viewDot=abs(dot(viewDir,normal));
+    float rim=pow(1.-viewDot,3.);
+    vec3 rimColor=vec3(0.4, 0.0, 0.0)*rim;
     
-    // Ambient: Keep this low so shadows aren't pitch black
-    vec3 ambient = vec3(1); 
-
-    // Combine
-    vec3 lighting = ambient + diffuse;
+    // --- 3. Fog Calculation ---
+    float dist=length(viewPos-fragPosition);
+    float fogStart=20.;
+    float fogEnd=100.;
+    // Calculate fog factor (0.0 = full fog, 1.0 = no fog)
+    float fogFactor=clamp((fogEnd-dist)/(fogEnd-fogStart),0.,1.);
+    vec3 fogColor=vec3(.31372,.31372,.31372);// Match this to your ClearBackground color
     
-    // Apply to texture and the tint color (make sure to pass WHITE in C)
-    finalColor = vec4(lighting, 1.0) * texelColor * colDiffuse;
+    // --- Combine Everything ---
+    vec3 lighting=vec3(diffuse+.2);// Diffuse + Ambient
+    vec3 colorWithRim=(texelColor.rgb*colDiffuse.rgb*lighting)+rimColor;
+    
+    // Final linear interpolation between model color and fog color
+    finalColor=vec4(mix(fogColor,colorWithRim,fogFactor),1.);
 }
