@@ -10,6 +10,14 @@
 #include "net/Net.h"
 #include "ui/Debug.h"
 
+#include "modules/InputSystem.h"
+#include "modules/MoveSystem.h"
+#include "modules/PhysxSystem.h"
+#include "modules/CamSystem.h"
+#include "modules/AnimSystem.h"
+#include "modules/NetSyncSystem.h"
+#include "modules/ViewSystem.h"
+
 Camera3D globalCamera = {
     .projection = CAMERA_PERSPECTIVE,
     .fovy = 45,
@@ -25,7 +33,7 @@ static int AddEntity(GameState *s)
         {
             s->entities.active[i] = true;
             s->bodies[i] = (Body){0};
-            s->inputs[i] = (Input){0};
+            s->inputs[i] = (Sol_Input){0};
             // Keep track of the highest index to optimize loops
             if (i >= s->entities.count)
                 s->entities.count = i + 1;
@@ -49,6 +57,11 @@ int CreatePlayer(GameState *s)
         .speedG = 5.0f,
         .speedA = 1.0f,
         .mass = 100.0f,
+    };
+
+    s->views[id] = (Sol_View){
+        .model = *s->wizardModel,
+        .yawOffset = 90.0f,
     };
 
     return id;
@@ -92,7 +105,7 @@ static bool Poll(World *self, float dt)
         return true;
     }
     GameState *s = (GameState *)self->state;
-    Input_Update(s->inputs, &s->entities, s->localId, &globalCamera);
+    Input_Update(s->inputs, &s->entities, s->localId, &globalCamera, &s->camControl);
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
     {
         if (IsCursorHidden())
@@ -120,21 +133,7 @@ static void Tick(World *self, float dt)
     Cam_Update(&globalCamera, &s->bodies[s->localId], &s->camControl, IsCursorHidden());
     Move_Update(s->inputs, s->bodies, &s->entities, dt);
     Update_Physx(s->bodies, &s->entities, dt);
-
-    if (GetRM()->models.wizardAnimCount > 0)
-    {
-        static float animCurrentFrame;
-        // 0 is usually the first animation (often Idle)
-        ModelAnimation anim = GetRM()->models.wizardAnims[0];
-
-        // Increment frame based on time
-        animCurrentFrame += 30.0f * dt; // Assuming 30 FPS animation
-        if (animCurrentFrame >= anim.keyframeCount)
-            animCurrentFrame = 0;
-
-        // Apply the animation state to the model's mesh/bones
-        UpdateModelAnimation(*s->wizardModel, anim, (int)animCurrentFrame);
-    }
+    Anim_Update(s->anims, &s->entities, dt);
 
     float cameraPos[3] = {globalCamera.position.x, globalCamera.position.y, globalCamera.position.z};
     int viewPosLoc = GetShaderLocation(GetRM()->shaders.light, "viewPos");
@@ -146,23 +145,27 @@ static void Draw(World *self)
     GameState *s = (GameState *)self->state;
 
     BeginMode3D(globalCamera);
-    for (int i = 0; i < MAX_ENTITIES; i++)
-    {
-        if (!s->entities.active[i])
-            continue;
-        Body body = s->bodies[i];
-        DrawModel(*s->playerModel, body.position, 1.0f, RED);
-        DrawModelWires(*s->playerModel, body.position, 1, BLACK);
-    }
+    // for (int i = 0; i < MAX_ENTITIES; i++)
+    // {
+    //     if (!s->entities.active[i])
+    //         continue;
+    //     Body body = s->bodies[i];
+    //     DrawModel(*s->playerModel, body.position, 1.0f, RED);
+    //     DrawModelWires(*s->playerModel, body.position, 1, BLACK);
+    // }
     // DrawModel(s->knotModel, (Vector3){0, 5, 0}, 1.0f, BLUE);
     // DrawModelWires(s->knotModel, (Vector3){0, 5, 0}, 1.0f, BLACK);
 
     rlDisableBackfaceCulling();
-    for (int i = 0; i < 100; i++)
-    {
-        DrawModel(*s->wizardModel, (Vector3){i + i, 2, 0}, 1.0f, WHITE);
-        // DrawModelWires(*s->wizardModel, (Vector3){i + i, 2, 0}, 1.0f, BLACK);
-    }
+
+    // for (int i = 0; i < 1000; i++)
+    // {
+    //     DrawModel(*s->wizardModel, (Vector3){i + i, 2, 0}, 1.0f, WHITE);
+    //     // DrawModelWires(*s->wizardModel, (Vector3){i + i, 2, 0}, 1.0f, BLACK);
+    // }
+
+    View_Update(s->views, s->bodies, &s->entities);
+
     rlEnableBackfaceCulling();
 
     DrawGrid(50, 1.0f);

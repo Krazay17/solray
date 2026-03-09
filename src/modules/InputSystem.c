@@ -1,21 +1,12 @@
 #include "InputSystem.h"
+#include "CamSystem.h"
 #include "raymath.h"
 #include "core/GameWorld.h"
 
-void Input_Update(Input *inputs, Entities *entities, int localId, Camera3D *cam)
+static void Local_Input(Sol_Input *input, int localId, Camera3D *cam, CamControl *ctrl)
 {
-    for (int i = 0; i < entities->count; i++)
-    {
-        if (!entities->active[i])
-            continue;
-        Input *input = &inputs[i];
-        if (i == localId)
-            Local_Input(input, localId, cam);
-    }
-}
-
-void Local_Input(Input *input, int localId, Camera3D *cam)
-{
+    input->yaw = ctrl->yaw;
+    input->pitch = ctrl->pitch;
     Vector3 fwd = Vector3Subtract(cam->target, cam->position);
     fwd.y = 0;
     fwd = Vector3Normalize(fwd);
@@ -36,6 +27,18 @@ void Local_Input(Input *input, int localId, Camera3D *cam)
     input->wishdir = Vector3Normalize(tempWish);
 }
 
-void Remote_Input(Input *input, int id, float yaw)
+static void Remote_Input(Sol_Input *input, int id, float yaw)
 {
+}
+
+void Input_Update(Sol_Input *inputs, Entities *entities, int localId, Camera3D *cam, CamControl *ctrl)
+{
+    for (int i = 0; i < entities->count; i++)
+    {
+        if (!entities->active[i])
+            continue;
+        Sol_Input *input = &inputs[i];
+        if (i == localId)
+            Local_Input(input, localId, cam, ctrl);
+    }
 }

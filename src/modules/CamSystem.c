@@ -1,4 +1,5 @@
 #include "CamSystem.h"
+#include <stdio.h>
 #include "raymath.h"
 
 void Cam_Update(Camera3D *cam, Body *body, CamControl *ctrl, bool locked)
@@ -11,6 +12,8 @@ void Cam_Update(Camera3D *cam, Body *body, CamControl *ctrl, bool locked)
         // 2. Update Euler Angles
         ctrl->yaw += mouseDelta.x * ctrl->sens;
         ctrl->pitch -= mouseDelta.y * ctrl->sens;
+
+        ctrl->yaw = fmodf(ctrl->yaw, 360.0f);
 
         // 3. Clamp Pitch (Prevent the camera from flipping upside down)
         if (ctrl->pitch > 89.0f)

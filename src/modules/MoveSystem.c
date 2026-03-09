@@ -2,14 +2,16 @@
 #include "raymath.h"
 #include "core/GameWorld.h"
 
-void Move_Update(Input *inputs, Body *bodies, Entities *entities, float dt)
+void Move_Update(Sol_Input *inputs, Body *bodies, Entities *entities, float dt)
 {
     for (int i = 0; i < entities->count; i++)
     {
         if (!entities->active[i])
             continue;
-        Input *input = &inputs[i];
+        Sol_Input *input = &inputs[i];
         Body *body = &bodies[i];
+        body->yaw = input->yaw;
+        Vector3RotateByAxisAngle(body->rotation, (Vector3){0,1,0}, input->yaw);
 
         // 1. Basic Movement
         // Note: Using Vector3Add here might make the player accelerate forever.

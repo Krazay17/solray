@@ -1,8 +1,5 @@
-#include "modules/InputSystem.h"
-#include "modules/MoveSystem.h"
-#include "modules/PhysxSystem.h"
-#include "modules/CamSystem.h"
-#include "modules/NetSyncSystem.h"
+#pragma once
+#include "Types.h"
 #include "net/Net.h"
 #include "models/rlights.h"
 
@@ -28,9 +25,12 @@ typedef struct GameState
 
     int localId;
     int netLocalId;
-    Entities entities;
-    Input inputs[MAX_ENTITIES];
-    Body bodies[MAX_ENTITIES];
     int netToLocal[MAX_CLIENTS];
+
+    Entities entities;
+    Sol_Input inputs[MAX_ENTITIES];
+    Body bodies[MAX_ENTITIES];
+    Sol_Anim anims[MAX_ENTITIES];
+    Sol_View views[MAX_ENTITIES];
 
 } GameState;

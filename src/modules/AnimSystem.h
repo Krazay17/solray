@@ -1,13 +1,4 @@
 #pragma once
-#include "core/GameWorld.h"
-#include "raylib.h"
+#include "core/Types.h"
 
-#define MAX_ANIMS 12
-
-typedef struct
-{
-    ModelSkeleton skele;
-    ModelAnimation anims[MAX_ANIMS];
-} EntityAnim;
-
-void Anim_Update(EntityAnim *anims, Entities *entities, float dt);
+void Anim_Update(Sol_Anim *anims, Entities *entities, float dt);

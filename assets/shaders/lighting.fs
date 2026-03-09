@@ -9,6 +9,7 @@ out vec4 finalColor;
 uniform sampler2D texture0;
 uniform vec4 colDiffuse;
 uniform vec3 viewPos;// We need this for both Rim and Fog
+uniform vec3 rimColor;
 
 void main()
 {
