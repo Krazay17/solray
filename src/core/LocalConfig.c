@@ -5,6 +5,7 @@ SolConfig Load_Config()
     SolConfig config = {
         .volume = 1.0f,
         .opacity = 1.0f,
+        .lookSens = 0.16f,
     };
 
     FILE *fptr;

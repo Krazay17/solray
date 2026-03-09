@@ -2,35 +2,33 @@
 #include <stdio.h>
 #include "raymath.h"
 
-void Cam_Update(Camera3D *cam, Body *body, CamControl *ctrl, bool locked)
+static Vector3 camAnchor = {0};
+static float smoothSpeed = 10.f;
+
+void Cam_Update(Camera3D *cam, Body *body, Sol_Input *input, float dt)
 {
-    if (locked)
-    {
-        // 1. Get Mouse Delta (How much did the mouse move this frame?)
-        Vector2 mouseDelta = GetMouseDelta();
-
-        // 2. Update Euler Angles
-        ctrl->yaw += mouseDelta.x * ctrl->sens;
-        ctrl->pitch -= mouseDelta.y * ctrl->sens;
-
-        ctrl->yaw = fmodf(ctrl->yaw, 360.0f);
-
-        // 3. Clamp Pitch (Prevent the camera from flipping upside down)
-        if (ctrl->pitch > 89.0f)
-            ctrl->pitch = 89.0f;
-        if (ctrl->pitch < -89.0f)
-            ctrl->pitch = -89.0f;
-    }
-
-    // 4. Calculate Direction Vector from Angles
-    Vector3 direction;
-    direction.x = cosf(DEG2RAD * ctrl->yaw) * cosf(DEG2RAD * ctrl->pitch);
-    direction.y = sinf(DEG2RAD * ctrl->pitch);
-    direction.z = sinf(DEG2RAD * ctrl->yaw) * cosf(DEG2RAD * ctrl->pitch);
-
-    // 5. Positioning (Third Person Offset)
     float distance = 10.0f;
-    cam->target = body->position;
-    // Position is Target MINUS the direction vector scaled by distance
-    cam->position = Vector3Subtract(cam->target, Vector3Scale(direction, distance));
+    float shoulderSide = 1.0f;
+    float shoulderHeight = 2.0f;
+    
+    // 1. Interpolate ONLY the base position (the "Lazy Root")
+    // This smooths out player movement/jitter, but knows nothing about rotation
+    float alpha = 1.0f - expf(-smoothSpeed * dt);
+    
+    camAnchor = Vector3Add(camAnchor, 
+                    Vector3Scale(Vector3Subtract(body->position, camAnchor), alpha));
+
+    // 2. Calculate the Snappy Offset (calculated every frame from fresh input)
+    Vector3 flatFwd = Vector3Normalize((Vector3){ input->lookDir.x, 0, input->lookDir.z });
+    Vector3 right = Vector3CrossProduct(flatFwd, (Vector3){0, 1, 0});
+    
+    // The "Shoulder Anchor" relative to our lazy root
+    Vector3 anchor = camAnchor;
+    anchor.y += shoulderHeight;
+    anchor = Vector3Add(anchor, Vector3Scale(right, shoulderSide));
+
+    // 3. Apply to Camera
+    // Target is snappy relative to the anchor; Position is snappy relative to the target
+    cam->target = anchor;
+    cam->position = Vector3Subtract(cam->target, Vector3Scale(input->lookDir, distance));
 }

@@ -38,6 +38,8 @@ typedef enum
 typedef struct Sol_Input
 {
     float yaw,pitch;
+    float lookSens;
+    Vector3 lookDir;
     Vector3 wishdir;
     uint8_t actionMask;
 } Sol_Input;

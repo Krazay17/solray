@@ -105,7 +105,7 @@ static bool Poll(World *self, float dt)
         return true;
     }
     GameState *s = (GameState *)self->state;
-    Input_Update(s->inputs, &s->entities, s->localId, &globalCamera, &s->camControl);
+    Input_Update(s->inputs, &s->entities, s->localId);
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
     {
         if (IsCursorHidden())
@@ -130,10 +130,10 @@ static void Tick(World *self, float dt)
 {
     GameState *s = (GameState *)self->state;
 
-    Cam_Update(&globalCamera, &s->bodies[s->localId], &s->camControl, IsCursorHidden());
     Move_Update(s->inputs, s->bodies, &s->entities, dt);
     Update_Physx(s->bodies, &s->entities, dt);
     Anim_Update(s->anims, &s->entities, dt);
+    Cam_Update(&globalCamera, &s->bodies[s->localId], &s->inputs[s->localId], dt);
 
     float cameraPos[3] = {globalCamera.position.x, globalCamera.position.y, globalCamera.position.z};
     int viewPosLoc = GetShaderLocation(GetRM()->shaders.light, "viewPos");

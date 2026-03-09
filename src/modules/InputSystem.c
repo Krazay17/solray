@@ -1,15 +1,35 @@
 #include "InputSystem.h"
+#include "raylib.h"
 #include "CamSystem.h"
 #include "raymath.h"
 #include "core/GameWorld.h"
+#include "core/GlobalState.h"
 
-static void Local_Input(Sol_Input *input, int localId, Camera3D *cam, CamControl *ctrl)
+static void Local_Input(Sol_Input *input, int localId)
 {
-    input->yaw = ctrl->yaw;
-    input->pitch = ctrl->pitch;
-    Vector3 fwd = Vector3Subtract(cam->target, cam->position);
+    if (IsCursorHidden())
+    {
+        // 1. Get Mouse Delta (How much did the mouse move this frame?)
+        Vector2 mouseDelta = GetMouseDelta();
+
+        // 2. Update Euler Angles
+        input->yaw += mouseDelta.x * LocalConfig.lookSens;
+        input->pitch -= mouseDelta.y * LocalConfig.lookSens;
+
+        input->yaw = fmodf(input->yaw, 360.0f);
+
+        // 3. Clamp Pitch (Prevent the camera from flipping upside down)
+        if (input->pitch > 89.0f)
+            input->pitch = 89.0f;
+        if (input->pitch < -89.0f)
+            input->pitch = -89.0f;
+    }
+
+    input->lookDir.x = cosf(DEG2RAD * input->yaw) * cosf(DEG2RAD * input->pitch);
+    input->lookDir.y = sinf(DEG2RAD * input->pitch);
+    input->lookDir.z = sinf(DEG2RAD * input->yaw) * cosf(DEG2RAD * input->pitch);
+    Vector3 fwd = input->lookDir;
     fwd.y = 0;
-    fwd = Vector3Normalize(fwd);
     Vector3 right = Vector3CrossProduct(fwd, (Vector3){0, 1, 0});
 
     Vector3 tempWish = {0};
@@ -31,14 +51,16 @@ static void Remote_Input(Sol_Input *input, int id, float yaw)
 {
 }
 
-void Input_Update(Sol_Input *inputs, Entities *entities, int localId, Camera3D *cam, CamControl *ctrl)
+void Input_Update(Sol_Input *inputs, Entities *entities, int localId)
 {
     for (int i = 0; i < entities->count; i++)
     {
         if (!entities->active[i])
             continue;
+
         Sol_Input *input = &inputs[i];
+
         if (i == localId)
-            Local_Input(input, localId, cam, ctrl);
+            Local_Input(input, localId);
     }
 }
